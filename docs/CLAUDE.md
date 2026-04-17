@@ -137,7 +137,7 @@ app/src/main/
 | 3 | Deep Work: Mandatory overlay Activity (all fields) | ✓ |
 | 4 | Deep Work: AlarmManager scheduling from overlay confirm | ✓ |
 | 5 | Deep Work: Alarm / vibration / flashlight / silent on timer fire | ✓ |
-| 6 | Deep Work: Screen-on/off BroadcastReceiver + away time detection | ☐ |
+| 6 | Deep Work: Screen-on/off BroadcastReceiver + away time detection | ✓ |
 | 7 | Deep Work: Overlay heading logic (on time / over time / away) | ☐ |
 | 8 | Deep Work: Room database for log entries | ☐ |
 | 9 | Deep Work: AccessibilityService overlay enforcement | ☐ |

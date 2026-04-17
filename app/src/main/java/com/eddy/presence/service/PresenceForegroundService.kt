@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.Ringtone
@@ -19,17 +20,26 @@ import android.os.VibratorManager
 import com.eddy.presence.MainActivity
 import com.eddy.presence.R
 import com.eddy.presence.alarm.TorchController
+import com.eddy.presence.receiver.ScreenStateReceiver
 import com.eddy.presence.state.SessionStateStore
 
 class PresenceForegroundService : Service() {
 
     private lateinit var notificationManager: NotificationManager
     private var activeRingtone: Ringtone? = null
+    private val screenStateReceiver = ScreenStateReceiver()
 
     override fun onCreate() {
         super.onCreate()
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannel()
+        // ACTION_SCREEN_ON/OFF cannot be received by a static manifest receiver —
+        // must be registered dynamically here while the service is alive.
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
+        registerReceiver(screenStateReceiver, filter)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -64,6 +74,7 @@ class PresenceForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        unregisterReceiver(screenStateReceiver)
         stopAlarmRingtone()
         super.onDestroy()
     }
