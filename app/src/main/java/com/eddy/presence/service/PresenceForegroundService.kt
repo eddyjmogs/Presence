@@ -87,6 +87,10 @@ class PresenceForegroundService : Service() {
             context.startForegroundService(intent)
         }
 
+        fun launchOverlay(context: Context) {
+            com.eddy.presence.ui.overlay.DeepWorkOverlayActivity.launch(context)
+        }
+
         fun stop(context: Context) {
             val intent = Intent(context, PresenceForegroundService::class.java).apply {
                 action = ACTION_STOP
