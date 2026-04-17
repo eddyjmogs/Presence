@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eddy.presence.alarm.AlarmScheduler
+import com.eddy.presence.service.PresenceForegroundService
 import com.eddy.presence.state.SessionStateStore
 import com.eddy.presence.ui.theme.PresenceTheme
 
@@ -90,6 +91,10 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                         store.notifySilent = state.notifySilent
                         store.timerExpired = false
                         store.pendingAcknowledgement = false
+                        // Always stop alarm sound, vibration, and torch regardless of
+                        // which notification type was active — torch in particular must
+                        // never be left on.
+                        PresenceForegroundService.stopAlarm(this@DeepWorkOverlayActivity)
                         AlarmScheduler.schedule(
                             this@DeepWorkOverlayActivity,
                             now + state.intervalMinutes * 60_000L,

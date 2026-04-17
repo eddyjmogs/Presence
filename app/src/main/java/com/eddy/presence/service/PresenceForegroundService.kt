@@ -7,14 +7,24 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.Ringtone
+import android.media.RingtoneManager
+import android.os.Build
 import android.os.IBinder
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import com.eddy.presence.MainActivity
 import com.eddy.presence.R
+import com.eddy.presence.alarm.TorchController
 import com.eddy.presence.state.SessionStateStore
 
 class PresenceForegroundService : Service() {
 
     private lateinit var notificationManager: NotificationManager
+    private var activeRingtone: Ringtone? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -31,7 +41,18 @@ class PresenceForegroundService : Service() {
                 store.currentTask = task
                 startForeground(NOTIFICATION_ID, buildDeepWorkNotification(task))
             }
+            ACTION_ALARM_FIRED -> {
+                startAlarmRingtone()
+            }
+            ACTION_STOP_ALARM -> {
+                stopAlarmRingtone()
+                cancelVibration()
+                TorchController.turnOff(this)
+            }
             ACTION_STOP -> {
+                stopAlarmRingtone()
+                cancelVibration()
+                TorchController.turnOff(this)
                 SessionStateStore(this).clearSession()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
@@ -41,6 +62,42 @@ class PresenceForegroundService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        stopAlarmRingtone()
+        super.onDestroy()
+    }
+
+    private fun startAlarmRingtone() {
+        stopAlarmRingtone() // ensure no double-play
+        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val ringtone = RingtoneManager.getRingtone(this, uri) ?: return
+        ringtone.audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            ringtone.isLooping = true
+        }
+        ringtone.play()
+        activeRingtone = ringtone
+    }
+
+    private fun stopAlarmRingtone() {
+        activeRingtone?.stop()
+        activeRingtone = null
+    }
+
+    private fun cancelVibration() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val manager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            manager.defaultVibrator.cancel()
+        } else {
+            @Suppress("DEPRECATION")
+            (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator).cancel()
+        }
+    }
 
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
@@ -62,7 +119,6 @@ class PresenceForegroundService : Service() {
             this, 0, openAppIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-
         val contentText = if (task.isNotBlank()) "Working on: $task" else "Deep Work in progress"
 
         return Notification.Builder(this, CHANNEL_ID)
@@ -78,6 +134,8 @@ class PresenceForegroundService : Service() {
 
     companion object {
         const val ACTION_START_DEEP_WORK = "com.eddy.presence.START_DEEP_WORK"
+        const val ACTION_ALARM_FIRED = "com.eddy.presence.ALARM_FIRED"
+        const val ACTION_STOP_ALARM = "com.eddy.presence.STOP_ALARM"
         const val ACTION_STOP = "com.eddy.presence.STOP"
         const val EXTRA_TASK = "extra_task"
 
@@ -85,11 +143,24 @@ class PresenceForegroundService : Service() {
         private const val NOTIFICATION_ID = 1
 
         fun startDeepWork(context: Context, task: String) {
-            val intent = Intent(context, PresenceForegroundService::class.java).apply {
-                action = ACTION_START_DEEP_WORK
-                putExtra(EXTRA_TASK, task)
-            }
-            context.startForegroundService(intent)
+            context.startForegroundService(
+                Intent(context, PresenceForegroundService::class.java)
+                    .apply { action = ACTION_START_DEEP_WORK; putExtra(EXTRA_TASK, task) }
+            )
+        }
+
+        fun fireAlarm(context: Context) {
+            context.startService(
+                Intent(context, PresenceForegroundService::class.java)
+                    .apply { action = ACTION_ALARM_FIRED }
+            )
+        }
+
+        fun stopAlarm(context: Context) {
+            context.startService(
+                Intent(context, PresenceForegroundService::class.java)
+                    .apply { action = ACTION_STOP_ALARM }
+            )
         }
 
         fun launchOverlay(context: Context) {
@@ -97,10 +168,10 @@ class PresenceForegroundService : Service() {
         }
 
         fun stop(context: Context) {
-            val intent = Intent(context, PresenceForegroundService::class.java).apply {
-                action = ACTION_STOP
-            }
-            context.startService(intent)
+            context.startService(
+                Intent(context, PresenceForegroundService::class.java)
+                    .apply { action = ACTION_STOP }
+            )
         }
     }
 }
