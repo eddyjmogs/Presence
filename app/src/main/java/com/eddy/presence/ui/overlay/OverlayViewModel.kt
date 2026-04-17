@@ -7,9 +7,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 enum class OverlayScenario {
-    OnTime,  // picked up within interval
-    OverTime, // picked up after interval expired — heading added in Step 7
-    Away,    // returned after idle with no active timer — heading added in Step 7
+    OnTime,   // picked up within interval
+    OverTime, // picked up after interval expired
+    Away,     // returned after idle with no active timer
 }
 
 data class OverlayUiState(
@@ -28,8 +28,9 @@ data class OverlayUiState(
     val canConfirm: Boolean get() = didText.isNotBlank() && nextFocusText.isNotBlank()
 
     val didLabel: String get() = when (scenario) {
+        OverlayScenario.OverTime -> "What happened / what did you work on?"
         OverlayScenario.Away -> "What did you do during that time?"
-        else -> "What did you work on?"
+        OverlayScenario.OnTime -> "What did you work on?"
     }
 }
 

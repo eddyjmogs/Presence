@@ -156,7 +156,6 @@ private fun OverlayScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 40.dp),
         ) {
-            // Context-aware heading — logic filled in Step 7
             ScenarioHeading(uiState)
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -243,23 +242,28 @@ private fun ScenarioHeading(uiState: OverlayUiState) {
             )
         }
         OverlayScenario.OverTime -> {
-            // Full heading logic in Step 7
             Text(
-                text = "You set ${uiState.setMinutes} min — it's been ${uiState.elapsedMinutes} min.",
+                text = "You set ${formatDuration(uiState.setMinutes)} — it's been ${formatDuration(uiState.elapsedMinutes)}.",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.error,
             )
         }
         OverlayScenario.Away -> {
-            // Full heading logic in Step 7
             Text(
-                text = "You were away for ${uiState.elapsedMinutes} min.",
+                text = "You were away for ${formatDuration(uiState.elapsedMinutes)}.",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
         }
     }
+}
+
+private fun formatDuration(minutes: Int): String {
+    if (minutes < 60) return "$minutes min"
+    val hours = minutes / 60
+    val remainder = minutes % 60
+    return if (remainder == 0) "$hours hr" else "$hours hr $remainder min"
 }
 
 private val INTERVAL_PRESETS = listOf(10, 15, 25, 30, 45, 60, 90)
