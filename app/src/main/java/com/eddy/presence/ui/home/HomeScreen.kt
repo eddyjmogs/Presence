@@ -35,7 +35,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun HomeScreen(
-    onStartDeepWork: () -> Unit,
+    onStartDeepWork: (task: String) -> Unit,
     onStartFocusMode: (context: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(),
@@ -73,7 +73,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = onStartDeepWork,
+                onClick = { onStartDeepWork(uiState.taskText) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = uiState.taskText.isNotBlank(),
             ) {
