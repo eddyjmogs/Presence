@@ -135,7 +135,7 @@ app/src/main/
 | 1 | Home screen UI — task input, mode buttons, today's log | ✓ |
 | 2 | Deep Work: ForegroundService skeleton + persistent notification | ✓ |
 | 3 | Deep Work: Mandatory overlay Activity (all fields) | ✓ |
-| 4 | Deep Work: AlarmManager scheduling from overlay confirm | ☐ |
+| 4 | Deep Work: AlarmManager scheduling from overlay confirm | ✓ |
 | 5 | Deep Work: Alarm / vibration / flashlight / silent on timer fire | ☐ |
 | 6 | Deep Work: Screen-on/off BroadcastReceiver + away time detection | ☐ |
 | 7 | Deep Work: Overlay heading logic (on time / over time / away) | ☐ |

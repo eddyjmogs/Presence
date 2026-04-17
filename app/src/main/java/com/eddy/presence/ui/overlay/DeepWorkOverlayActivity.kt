@@ -34,6 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.eddy.presence.alarm.AlarmScheduler
+import com.eddy.presence.state.SessionStateStore
 import com.eddy.presence.ui.theme.PresenceTheme
 
 class DeepWorkOverlayActivity : ComponentActivity() {
@@ -77,7 +79,21 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                     onNotifyFlashlightToggle = viewModel::onNotifyFlashlightToggle,
                     onNotifySilentToggle = viewModel::onNotifySilentToggle,
                     onConfirm = {
-                        // Step 4: schedule AlarmManager here
+                        val state = viewModel.uiState.value
+                        val now = System.currentTimeMillis()
+                        val store = SessionStateStore(this@DeepWorkOverlayActivity)
+                        store.intervalMinutes = state.intervalMinutes
+                        store.timerStartTime = now
+                        store.notifyAlarm = state.notifyAlarm
+                        store.notifyVibration = state.notifyVibration
+                        store.notifyFlashlight = state.notifyFlashlight
+                        store.notifySilent = state.notifySilent
+                        store.timerExpired = false
+                        store.pendingAcknowledgement = false
+                        AlarmScheduler.schedule(
+                            this@DeepWorkOverlayActivity,
+                            now + state.intervalMinutes * 60_000L,
+                        )
                         finish()
                     },
                 )

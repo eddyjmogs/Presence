@@ -10,6 +10,7 @@ import android.content.Intent
 import android.os.IBinder
 import com.eddy.presence.MainActivity
 import com.eddy.presence.R
+import com.eddy.presence.state.SessionStateStore
 
 class PresenceForegroundService : Service() {
 
@@ -25,9 +26,13 @@ class PresenceForegroundService : Service() {
         when (intent?.action) {
             ACTION_START_DEEP_WORK -> {
                 val task = intent.getStringExtra(EXTRA_TASK) ?: ""
+                val store = SessionStateStore(this)
+                store.deepWorkActive = true
+                store.currentTask = task
                 startForeground(NOTIFICATION_ID, buildDeepWorkNotification(task))
             }
             ACTION_STOP -> {
+                SessionStateStore(this).clearSession()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
