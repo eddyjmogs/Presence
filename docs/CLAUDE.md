@@ -132,7 +132,7 @@ app/src/main/
 
 | Step | Feature | Status |
 |---|---|---|
-| 1 | Home screen UI — task input, mode buttons, today's log | ☐ |
+| 1 | Home screen UI — task input, mode buttons, today's log | ✓ |
 | 2 | Deep Work: ForegroundService skeleton + persistent notification | ☐ |
 | 3 | Deep Work: Mandatory overlay Activity (all fields) | ☐ |
 | 4 | Deep Work: AlarmManager scheduling from overlay confirm | ☐ |
