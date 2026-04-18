@@ -59,6 +59,7 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val todayEntries by viewModel.todayEntries.collectAsState()
     val customContextNames by viewModel.customContextNames.collectAsState()
+    val countdownSeconds by viewModel.countdownSeconds.collectAsState()
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -72,7 +73,11 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Top,
         ) {
             if (uiState.session.isActive) {
-                SessionBanner(session = uiState.session, onStop = onStopSession)
+                SessionBanner(
+                    session = uiState.session,
+                    countdownSeconds = countdownSeconds,
+                    onStop = onStopSession,
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
@@ -167,7 +172,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SessionBanner(session: ActiveSession, onStop: () -> Unit) {
+private fun SessionBanner(session: ActiveSession, countdownSeconds: Long, onStop: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -195,6 +200,26 @@ private fun SessionBanner(session: ActiveSession, onStop: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            if (session.deepWorkActive) {
+                val isPending = session.timerExpired || countdownSeconds == 0L
+                val countdownText = when {
+                    countdownSeconds < 0L -> null  // timer not yet initialized
+                    isPending -> "Check-in pending"
+                    else -> {
+                        val m = countdownSeconds / 60
+                        val s = countdownSeconds % 60
+                        "Next check-in in %d:%02d".format(m, s)
+                    }
+                }
+                if (countdownText != null) {
+                    Text(
+                        text = countdownText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isPending) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
         Button(

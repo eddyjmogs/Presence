@@ -175,7 +175,17 @@ class MainActivity : ComponentActivity() {
 
     private fun launchDeepWork(task: String) {
         PresenceForegroundService.startDeepWork(this, task)
-        homeViewModel.refreshSessionState(SessionStateStore(this).also { it.deepWorkActive = true; it.currentTask = task })
+        // Optimistic state update — service will write the same values once it starts.
+        // We write timerStartTime here so the countdown renders immediately on return.
+        val now = System.currentTimeMillis()
+        val store = SessionStateStore(this)
+        homeViewModel.refreshSessionState(store.also {
+            it.deepWorkActive = true
+            it.currentTask = task
+            it.timerStartTime = now
+            it.timerExpired = false
+            it.pendingAcknowledgement = false
+        })
     }
 
     private fun startFocusMode(contextName: String) {

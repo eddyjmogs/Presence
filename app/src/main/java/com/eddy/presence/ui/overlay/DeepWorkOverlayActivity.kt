@@ -36,6 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.eddy.presence.PresenceApplication
+import com.eddy.presence.intervalLabel
+import com.eddy.presence.intervalToMs
 import com.eddy.presence.alarm.AlarmScheduler
 import com.eddy.presence.data.model.LogEntry
 import com.eddy.presence.service.PresenceForegroundService
@@ -102,7 +104,7 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                         PresenceForegroundService.stopAlarm(this@DeepWorkOverlayActivity)
                         AlarmScheduler.schedule(
                             this@DeepWorkOverlayActivity,
-                            now + state.intervalMinutes * 60_000L,
+                            now + intervalToMs(state.intervalMinutes),
                         )
                         lifecycleScope.launch(Dispatchers.IO) {
                             val repo = (application as PresenceApplication).logRepository
@@ -288,7 +290,7 @@ private fun formatDuration(minutes: Int): String {
     return if (remainder == 0) "$hours hr" else "$hours hr $remainder min"
 }
 
-private val INTERVAL_PRESETS = listOf(10, 15, 25, 30, 45, 60, 90)
+private val INTERVAL_PRESETS = listOf(-10, 1, 10, 15, 25, 30, 45, 60, 90)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -305,7 +307,7 @@ private fun IntervalPicker(
             FilterChip(
                 selected = selectedMinutes == minutes,
                 onClick = { onSelect(minutes) },
-                label = { Text("${minutes}m") },
+                label = { Text(intervalLabel(minutes)) },
             )
         }
     }

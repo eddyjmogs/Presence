@@ -19,6 +19,8 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import com.eddy.presence.MainActivity
 import com.eddy.presence.R
+import com.eddy.presence.alarm.AlarmScheduler
+import com.eddy.presence.intervalToMs
 import com.eddy.presence.alarm.TorchController
 import com.eddy.presence.receiver.ScreenStateReceiver
 import com.eddy.presence.state.SessionStateStore
@@ -46,9 +48,14 @@ class PresenceForegroundService : Service() {
         when (intent?.action) {
             ACTION_START_DEEP_WORK -> {
                 val task = intent.getStringExtra(EXTRA_TASK) ?: ""
+                val now = System.currentTimeMillis()
                 val store = SessionStateStore(this)
                 store.deepWorkActive = true
                 store.currentTask = task
+                store.timerStartTime = now
+                store.timerExpired = false
+                store.pendingAcknowledgement = false
+                AlarmScheduler.schedule(this, now + intervalToMs(store.intervalMinutes))
                 startForeground(NOTIFICATION_ID, buildDeepWorkNotification(task))
             }
             ACTION_ALARM_FIRED -> {

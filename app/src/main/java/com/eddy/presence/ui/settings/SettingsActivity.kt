@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.eddy.presence.intervalLabel
 import com.eddy.presence.ui.theme.PresenceTheme
 import com.eddy.presence.ui.whitelist.WhitelistManagerActivity
 
@@ -89,7 +90,7 @@ class SettingsActivity : ComponentActivity() {
     }
 }
 
-private val INTERVAL_PRESETS = listOf(10, 15, 25, 30, 45, 60, 90)
+private val INTERVAL_PRESETS = listOf(-10, 1, 10, 15, 25, 30, 45, 60, 90)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -165,7 +166,7 @@ private fun SettingsScreen(
                     FilterChip(
                         selected = uiState.defaultIntervalMinutes == minutes,
                         onClick = { onSetInterval(minutes) },
-                        label = { Text("${minutes}m") },
+                        label = { Text(intervalLabel(minutes)) },
                     )
                 }
             }

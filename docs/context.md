@@ -315,6 +315,37 @@ All permissions requested on first launch with plain-language explanations.
 
 ---
 
+## Known Issues & Recommended Next Steps
+
+These are confirmed gaps in the current implementation, in priority order.
+
+### Critical (functional holes)
+
+**1. Missing manifest permission for battery optimization**
+`android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` is not declared in `AndroidManifest.xml`. The battery optimization exemption request silently fails without it. One-line fix.
+
+**2. No boot receiver — alarms lost on device restart**
+`AlarmManager` alarms are wiped when the device restarts. If a Deep Work session is active and the phone reboots, the timer is silently lost. Needs a `RECEIVE_BOOT_COMPLETED` receiver that reads `SessionStateStore` on boot and reschedules the alarm if `deepWorkActive && timerStartTime > 0`.
+
+**3. OnTime overlay doesn't fire when screen is already on**
+When the alarm fires and the screen is already on, the overlay only surfaces via `AccessibilityService` detecting the next app switch. If the user stays in the same app after the alarm fires, no overlay appears until they switch apps. `AlarmReceiver` should directly launch the overlay for the OnTime scenario when the alarm fires (check `PowerManager.isScreenOn()`).
+
+**4. Focus Mode sessions are never logged**
+There is no `LogEntry` written when a Focus Mode session ends. The history screen will be empty for all Focus Mode usage. Needs a log entry write in `PresenceForegroundService` when `ACTION_STOP_FOCUS_MODE` is processed (duration = now − `timerStartTime`, mode = "FOCUS_MODE").
+
+### Important (UX gaps)
+
+**5. Stop button has no confirmation**
+Tapping Stop during an active Deep Work session discards the current interval with no warning. A simple confirmation dialog ("End session? Your current interval won't be logged.") prevents accidental taps.
+
+**6. No notification Stop action**
+The persistent notification has no Stop action button. Users expect to be able to stop a session from the notification shade without opening the app. Needs a `PendingIntent` action on the notification that sends `ACTION_STOP` / `ACTION_STOP_FOCUS_MODE` directly to the service.
+
+**7. Activity writes session state before the service does**
+In `MainActivity.launchDeepWork()` and `startFocusMode()`, the activity pre-writes to `SessionStateStore` to make the session banner appear immediately. The service will write the same values again when it processes the intent. This is harmless today but creates two sources of truth. The correct pattern is to only write from the service and refresh the UI via a small delay or lifecycle event.
+
+---
+
 ## Future Ideas
 
 - Weekly summary: "8 out of 10 commutes were productive this week"

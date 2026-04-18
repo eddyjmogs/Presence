@@ -15,6 +15,17 @@ Full spec is in [docs/context.md](docs/context.md).
 
 ---
 
+## Build Environment
+
+| Tool | Version | Notes |
+|---|---|---|
+| AGP | 9.1.1 | Uses `android.builtInKotlin=false` + `android.newDsl=false` in `gradle.properties` — required for KAPT to work. Both flags are deprecated and will be removed in AGP 10. |
+| Kotlin | 2.2.10 | Applied via `kotlin("android")` + `kotlin("kapt")` plugins explicitly |
+| Room | 2.7.1 | Must be ≥ 2.7.0 — older versions bundle a `kotlinx-metadata-jvm` that only supports Kotlin metadata up to 2.0.0 |
+| KSP | 2.2.20-2.0.4 | Listed in version catalog but **not currently used** — Room uses KAPT |
+| JDK | 21 (Android Studio bundled) | Run Gradle via `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` |
+| Compile / Target SDK | 36 | Uses `release(36) { minorApiLevel = 1 }` DSL |
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -38,29 +49,37 @@ Full spec is in [docs/context.md](docs/context.md).
 
 ```
 app/src/main/
-├── java/com/presence/
+├── java/com/eddy/presence/
 │   ├── ui/
-│   │   ├── home/               # HomeScreen composable + HomeViewModel
-│   │   ├── overlay/            # DeepWorkOverlayActivity + OverlayViewModel
+│   │   ├── home/               # HomeScreen, HomeViewModel
+│   │   ├── overlay/            # DeepWorkOverlayActivity, OverlayViewModel
 │   │   ├── reminder/           # FocusSoftReminderActivity
-│   │   ├── history/            # HistoryScreen + HistoryViewModel
-│   │   └── settings/           # SettingsScreen, WhitelistManager, PermissionsScreen
+│   │   ├── whitelist/          # WhitelistManagerActivity, WhitelistManagerViewModel
+│   │   ├── history/            # HistoryActivity, HistoryViewModel
+│   │   ├── settings/           # SettingsActivity, SettingsViewModel
+│   │   └── theme/              # PresenceTheme, Color, Type
 │   ├── service/
 │   │   ├── PresenceForegroundService.kt
 │   │   └── PresenceAccessibilityService.kt
 │   ├── receiver/
 │   │   └── ScreenStateReceiver.kt      # ACTION_SCREEN_ON / ACTION_SCREEN_OFF
 │   ├── alarm/
-│   │   └── AlarmReceiver.kt            # AlarmManager broadcast handler
+│   │   ├── AlarmReceiver.kt            # AlarmManager broadcast handler
+│   │   ├── AlarmScheduler.kt           # setExactAndAllowWhileIdle wrapper
+│   │   └── TorchController.kt          # CameraManager torch wrapper
 │   ├── data/
-│   │   ├── db/                         # Room database, DAOs
-│   │   ├── model/                      # Entity data classes
-│   │   └── repository/                 # Repository classes (one per domain)
+│   │   ├── db/                         # PresenceDatabase, LogEntryDao, WhitelistDao, FocusContextDao
+│   │   ├── model/                      # LogEntry, WhitelistEntry, FocusContext
+│   │   └── repository/                 # LogRepository, WhitelistRepository, FocusContextRepository
 │   ├── state/
 │   │   └── SessionStateStore.kt        # SharedPreferences-backed session state
+│   ├── PresenceApplication.kt          # Application class — database + repository singletons
 │   └── MainActivity.kt
 └── res/
-    └── ...
+    ├── xml/
+    │   └── accessibility_service_config.xml
+    └── values/
+        └── strings.xml
 ```
 
 ---
@@ -120,15 +139,22 @@ app/src/main/
 | `deepWorkActive` | Boolean | Whether a Deep Work session is running |
 | `focusModeActive` | Boolean | Whether Focus Mode is running |
 | `focusModeContext` | String | Current Focus Mode context label |
-| `currentIntervalMinutes` | Int | The user-set interval for the current check-in |
+| `focusModeAllowedPackage` | String | Package the user allowed via "Continue Anyway"; cleared when they open a different app |
+| `currentTask` | String | Task name entered at Deep Work start |
+| `intervalMinutes` | Int | Current (or default) check-in interval |
 | `timerStartTime` | Long | Epoch millis when the current interval started |
 | `timerExpired` | Boolean | Whether AlarmManager has fired and overlay is pending |
+| `pendingAcknowledgement` | Boolean | Whether the overlay is waiting for the user to confirm |
 | `screenOffTime` | Long | Epoch millis of last screen-off event |
-| `notificationTypes` | String (JSON) | Alarm/Vibration/Flashlight/Silent flags |
+| `notifyAlarm` | Boolean | Alarm notification type enabled |
+| `notifyVibration` | Boolean | Vibration notification type enabled |
+| `notifyFlashlight` | Boolean | Flashlight notification type enabled |
+| `notifySilent` | Boolean | Silent (no interruption) mode enabled |
+| `onboardingDone` | Boolean | Whether the first-launch onboarding dialog has been shown |
 
 ---
 
-## Build Order & Current Step
+## Build History — All Steps Complete
 
 | Step | Feature | Status |
 |---|---|---|
@@ -149,7 +175,18 @@ app/src/main/
 | 15 | Settings screen | ✓ |
 | 16 | Polish: onboarding, permission prompts, edge cases, battery optimization | ✓ |
 
-**Update this table as steps are completed.** Mark done steps with ✓.
+## Pending Issues
+
+Known gaps to address before production use. See `docs/context.md → Known Issues` for full detail.
+
+| # | Issue | Priority |
+|---|---|---|
+| P1 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` missing from manifest | Critical |
+| P2 | No boot receiver — alarms lost on device restart | Critical |
+| P3 | OnTime overlay doesn't fire when screen is already on at alarm time | Critical |
+| P4 | Focus Mode sessions produce no log entries | Critical |
+| P5 | Stop button has no confirmation dialog | Important |
+| P6 | No Stop action on the persistent notification | Important |
 
 ---
 
