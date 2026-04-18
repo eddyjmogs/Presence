@@ -44,6 +44,13 @@
             android:name=".ui.whitelist.WhitelistManagerActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.reminder.FocusSoftReminderActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Presence" />
+
         <receiver
             android:name=".alarm.AlarmReceiver"
             android:exported="false" />
