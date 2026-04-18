@@ -140,7 +140,7 @@ app/src/main/
 | 6 | Deep Work: Screen-on/off BroadcastReceiver + away time detection | ✓ |
 | 7 | Deep Work: Overlay heading logic (on time / over time / away) | ✓ |
 | 8 | Deep Work: Room database for log entries | ✓ |
-| 9 | Deep Work: AccessibilityService overlay enforcement | ☐ |
+| 9 | Deep Work: AccessibilityService overlay enforcement | ✓ |
 | 10 | Focus Mode: Whitelist manager UI (installed apps checklist) | ☐ |
 | 11 | Focus Mode: AccessibilityService extension for whitelist checking | ☐ |
 | 12 | Focus Mode: Soft reminder screen | ☐ |

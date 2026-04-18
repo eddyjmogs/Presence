@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Presence</string>
+    <string name="accessibility_service_description">Presence uses Accessibility to re-display the check-in overlay if you navigate away during a Deep Work session.</string>
 </resources>
