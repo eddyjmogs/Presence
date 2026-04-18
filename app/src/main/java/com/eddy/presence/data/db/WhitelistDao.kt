@@ -18,4 +18,7 @@ interface WhitelistDao {
 
     @Query("SELECT packageName FROM whitelist_entries WHERE contextName = :contextName")
     fun getPackagesForContext(contextName: String): Flow<List<String>>
+
+    @Query("DELETE FROM whitelist_entries WHERE contextName = :contextName")
+    suspend fun deleteAllForContext(contextName: String)
 }

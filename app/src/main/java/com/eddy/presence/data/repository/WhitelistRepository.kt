@@ -13,4 +13,6 @@ class WhitelistRepository(private val dao: WhitelistDao) {
         val entry = WhitelistEntry(contextName = contextName, packageName = packageName)
         if (whitelisted) dao.insert(entry) else dao.delete(entry)
     }
+
+    suspend fun deleteAllForContext(contextName: String) = dao.deleteAllForContext(contextName)
 }

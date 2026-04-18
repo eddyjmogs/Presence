@@ -49,6 +49,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.reminder.FocusSoftReminderActivity"
             android:exported="false"
             android:excludeFromRecents="true"

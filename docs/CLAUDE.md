@@ -146,7 +146,7 @@ app/src/main/
 | 12 | Focus Mode: Soft reminder screen | ✓ |
 | 13 | Focus Mode: Custom context creation | ✓ |
 | 14 | History screen (combined log, grouped by day) | ✓ |
-| 15 | Settings screen | ☐ |
+| 15 | Settings screen | ✓ |
 | 16 | Polish: onboarding, permission prompts, edge cases, battery optimization | ☐ |
 
 **Update this table as steps are completed.** Mark done steps with ✓.
