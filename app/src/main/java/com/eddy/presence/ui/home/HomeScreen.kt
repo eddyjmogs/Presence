@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -25,9 +26,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +55,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val todayEntries by viewModel.todayEntries.collectAsState()
+    val customContextNames by viewModel.customContextNames.collectAsState()
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -94,6 +100,7 @@ fun HomeScreen(
             val ctx = LocalContext.current
             FocusModeSelector(
                 expanded = uiState.focusModeExpanded,
+                customContextNames = customContextNames,
                 onToggle = viewModel::toggleFocusModeExpanded,
                 onContextSelected = { context ->
                     viewModel.collapseFocusMode()
@@ -102,6 +109,7 @@ fun HomeScreen(
                 onManageWhitelist = { contextName ->
                     WhitelistManagerActivity.launch(ctx, contextName)
                 },
+                onAddCustom = viewModel::showCreateContextDialog,
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -132,14 +140,56 @@ fun HomeScreen(
             }
         }
     }
+
+    if (uiState.showCreateContextDialog) {
+        CreateContextDialog(
+            onConfirm = viewModel::createContext,
+            onDismiss = viewModel::dismissCreateContextDialog,
+        )
+    }
+}
+
+@Composable
+private fun CreateContextDialog(
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by rememberSaveable { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New Focus Context") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Context name") },
+                placeholder = { Text("e.g. Reading, Gym...") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(name) },
+                enabled = name.isNotBlank(),
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
 }
 
 @Composable
 private fun FocusModeSelector(
     expanded: Boolean,
+    customContextNames: List<String>,
     onToggle: () -> Unit,
     onContextSelected: (String) -> Unit,
     onManageWhitelist: (String) -> Unit,
+    onAddCustom: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -173,7 +223,14 @@ private fun FocusModeSelector(
                     onClick = { onContextSelected("Bathroom") },
                     onManage = { onManageWhitelist("Bathroom") },
                 )
-                FocusModeOption(label = "+ Custom...", onClick = { onContextSelected("Custom") })
+                customContextNames.forEach { name ->
+                    FocusModeOption(
+                        label = name,
+                        onClick = { onContextSelected(name) },
+                        onManage = { onManageWhitelist(name) },
+                    )
+                }
+                FocusModeOption(label = "+ Custom...", onClick = onAddCustom)
             }
         }
     }
