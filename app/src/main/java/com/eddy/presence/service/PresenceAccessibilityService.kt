@@ -38,8 +38,15 @@ class PresenceAccessibilityService : AccessibilityService() {
         if (store.focusModeActive) {
             val contextName = store.focusModeContext
             updateWhitelistObserver(contextName)
-            if (packageName !in cachedWhitelist) {
-                FocusSoftReminderActivity.launch(applicationContext, contextName)
+
+            val allowedPackage = store.focusModeAllowedPackage
+            if (allowedPackage.isNotBlank() && packageName != allowedPackage) {
+                // User moved to a different app — the explicit allow expires
+                store.focusModeAllowedPackage = ""
+            }
+
+            if (packageName !in cachedWhitelist && packageName != allowedPackage) {
+                FocusSoftReminderActivity.launch(applicationContext, contextName, packageName)
             }
         }
     }

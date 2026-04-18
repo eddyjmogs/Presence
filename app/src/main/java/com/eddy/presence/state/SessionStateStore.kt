@@ -64,6 +64,12 @@ class SessionStateStore(context: Context) {
         get() = prefs.getBoolean(KEY_NOTIFY_SILENT, false)
         set(v) = prefs.edit().putBoolean(KEY_NOTIFY_SILENT, v).apply()
 
+    // Package the user explicitly allowed during Focus Mode via "Continue Anyway".
+    // Cleared when they open a different app — ensures the reminder re-fires for new apps.
+    var focusModeAllowedPackage: String
+        get() = prefs.getString(KEY_FOCUS_ALLOWED_PKG, "") ?: ""
+        set(v) = prefs.edit().putString(KEY_FOCUS_ALLOWED_PKG, v).apply()
+
     fun clearSession() {
         prefs.edit()
             .putBoolean(KEY_DEEP_WORK_ACTIVE, false)
@@ -88,5 +94,6 @@ class SessionStateStore(context: Context) {
         private const val KEY_NOTIFY_VIBRATION = "notify_vibration"
         private const val KEY_NOTIFY_FLASHLIGHT = "notify_flashlight"
         private const val KEY_NOTIFY_SILENT = "notify_silent"
+        private const val KEY_FOCUS_ALLOWED_PKG = "focus_allowed_pkg"
     }
 }
