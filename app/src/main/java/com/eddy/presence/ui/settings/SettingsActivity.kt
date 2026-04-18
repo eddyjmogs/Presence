@@ -42,11 +42,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -55,6 +60,14 @@ import androidx.compose.ui.unit.dp
 import com.eddy.presence.intervalLabel
 import com.eddy.presence.ui.theme.PresenceTheme
 import com.eddy.presence.ui.whitelist.WhitelistManagerActivity
+
+private data class PermissionState(
+    val hasOverlay: Boolean,
+    val hasAccessibility: Boolean,
+    val hasExactAlarm: Boolean,
+    val hasNotifications: Boolean,
+    val hasBatteryExempt: Boolean,
+)
 
 class SettingsActivity : ComponentActivity() {
 
@@ -275,17 +288,36 @@ private fun CheckRow(label: String, checked: Boolean, onCheckedChange: (Boolean)
 private fun PermissionsSection(context: Context) {
     val packageName = context.packageName
 
-    val hasOverlay = Settings.canDrawOverlays(context)
-    val hasAccessibility = isAccessibilityEnabled(context)
-    val hasExactAlarm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
-    } else true
-    val hasNotifications = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-    } else true
-    val hasBatteryExempt = (context.getSystemService(Context.POWER_SERVICE) as PowerManager)
-        .isIgnoringBatteryOptimizations(packageName)
+    fun checkPermissions() = PermissionState(
+        hasOverlay = Settings.canDrawOverlays(context),
+        hasAccessibility = isAccessibilityEnabled(context),
+        hasExactAlarm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
+        else true,
+        hasNotifications = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+        else true,
+        hasBatteryExempt = (context.getSystemService(Context.POWER_SERVICE) as PowerManager)
+            .isIgnoringBatteryOptimizations(packageName),
+    )
+
+    var perms by remember { mutableStateOf(checkPermissions()) }
+
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) perms = checkPermissions()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+
+    val hasOverlay = perms.hasOverlay
+    val hasAccessibility = perms.hasAccessibility
+    val hasExactAlarm = perms.hasExactAlarm
+    val hasNotifications = perms.hasNotifications
+    val hasBatteryExempt = perms.hasBatteryExempt
 
     PermissionRow(
         label = "Draw over other apps",
@@ -338,7 +370,10 @@ private fun isAccessibilityEnabled(context: Context): Boolean {
         context.contentResolver,
         Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
     ) ?: return false
-    return flat.contains("${context.packageName}/.service.PresenceAccessibilityService", ignoreCase = true)
+    return flat.split(":").any { component ->
+        component.startsWith(context.packageName, ignoreCase = true) &&
+            component.contains("PresenceAccessibilityService", ignoreCase = true)
+    }
 }
 
 @Composable

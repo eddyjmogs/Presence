@@ -55,8 +55,19 @@ class PresenceForegroundService : Service() {
                 store.timerStartTime = now
                 store.timerExpired = false
                 store.pendingAcknowledgement = false
-                AlarmScheduler.schedule(this, now + intervalToMs(store.intervalMinutes))
-                startForeground(NOTIFICATION_ID, buildDeepWorkNotification(task))
+                val endMs = now + intervalToMs(store.intervalMinutes)
+                AlarmScheduler.schedule(this, endMs)
+                startForeground(NOTIFICATION_ID, buildDeepWorkNotification(task, endMs))
+            }
+            ACTION_UPDATE_DEEP_WORK_NOTIFICATION -> {
+                val store = SessionStateStore(this)
+                if (store.deepWorkActive) {
+                    val endMs = store.timerStartTime + intervalToMs(store.intervalMinutes)
+                    notificationManager.notify(
+                        NOTIFICATION_ID,
+                        buildDeepWorkNotification(store.currentTask, endMs),
+                    )
+                }
             }
             ACTION_ALARM_FIRED -> {
                 startAlarmRingtone()
@@ -164,7 +175,7 @@ class PresenceForegroundService : Service() {
             .build()
     }
 
-    private fun buildDeepWorkNotification(task: String): Notification {
+    private fun buildDeepWorkNotification(task: String, intervalEndMs: Long = 0L): Notification {
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -181,7 +192,9 @@ class PresenceForegroundService : Service() {
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setShowWhen(true)
-            .setWhen(System.currentTimeMillis())
+            .setUsesChronometer(true)
+            .setChronometerCountDown(true)
+            .setWhen(intervalEndMs.takeIf { it > 0L } ?: System.currentTimeMillis())
             .build()
     }
 
@@ -192,6 +205,7 @@ class PresenceForegroundService : Service() {
         const val ACTION_ALARM_FIRED = "com.eddy.presence.ALARM_FIRED"
         const val ACTION_STOP_ALARM = "com.eddy.presence.STOP_ALARM"
         const val ACTION_STOP = "com.eddy.presence.STOP"
+        const val ACTION_UPDATE_DEEP_WORK_NOTIFICATION = "com.eddy.presence.UPDATE_DW_NOTIFICATION"
         const val EXTRA_TASK = "extra_task"
         const val EXTRA_CONTEXT = "extra_context"
 
@@ -241,6 +255,13 @@ class PresenceForegroundService : Service() {
             context.startService(
                 Intent(context, PresenceForegroundService::class.java)
                     .apply { action = ACTION_STOP }
+            )
+        }
+
+        fun updateDeepWorkNotification(context: Context) {
+            context.startService(
+                Intent(context, PresenceForegroundService::class.java)
+                    .apply { action = ACTION_UPDATE_DEEP_WORK_NOTIFICATION }
             )
         }
     }

@@ -102,6 +102,7 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                         // which notification type was active — torch in particular must
                         // never be left on.
                         PresenceForegroundService.stopAlarm(this@DeepWorkOverlayActivity)
+                        PresenceForegroundService.updateDeepWorkNotification(this@DeepWorkOverlayActivity)
                         AlarmScheduler.schedule(
                             this@DeepWorkOverlayActivity,
                             now + intervalToMs(state.intervalMinutes),

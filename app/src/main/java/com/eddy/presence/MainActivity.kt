@@ -231,7 +231,10 @@ class MainActivity : ComponentActivity() {
     private fun isAccessibilityEnabled(): Boolean {
         val flat = Settings.Secure.getString(
             contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
-        return flat.contains("$packageName/.service.PresenceAccessibilityService", ignoreCase = true)
+        return flat.split(":").any { component ->
+            component.startsWith(packageName, ignoreCase = true) &&
+                component.contains("PresenceAccessibilityService", ignoreCase = true)
+        }
     }
 }
 
