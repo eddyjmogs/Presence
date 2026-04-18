@@ -2,6 +2,7 @@ package com.eddy.presence.state
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.eddy.presence.NotifyType
 
 /**
  * SharedPreferences-backed store for session state that must survive process restarts.
@@ -49,7 +50,7 @@ class SessionStateStore(context: Context) {
         set(v) = prefs.edit().putLong(KEY_SCREEN_OFF_TIME, v).apply()
 
     var notifyAlarm: Boolean
-        get() = prefs.getBoolean(KEY_NOTIFY_ALARM, true)
+        get() = prefs.getBoolean(KEY_NOTIFY_ALARM, false)
         set(v) = prefs.edit().putBoolean(KEY_NOTIFY_ALARM, v).apply()
 
     var notifyVibration: Boolean
@@ -61,8 +62,22 @@ class SessionStateStore(context: Context) {
         set(v) = prefs.edit().putBoolean(KEY_NOTIFY_FLASHLIGHT, v).apply()
 
     var notifySilent: Boolean
-        get() = prefs.getBoolean(KEY_NOTIFY_SILENT, false)
+        get() = prefs.getBoolean(KEY_NOTIFY_SILENT, true)
         set(v) = prefs.edit().putBoolean(KEY_NOTIFY_SILENT, v).apply()
+
+    var notifyType: NotifyType
+        get() = when {
+            notifyAlarm -> NotifyType.Alarm
+            notifyVibration -> NotifyType.Vibration
+            notifyFlashlight -> NotifyType.Flashlight
+            else -> NotifyType.Silent
+        }
+        set(v) {
+            notifyAlarm = v == NotifyType.Alarm
+            notifyVibration = v == NotifyType.Vibration
+            notifyFlashlight = v == NotifyType.Flashlight
+            notifySilent = v == NotifyType.Silent
+        }
 
     // Package the user explicitly allowed during Focus Mode via "Continue Anyway".
     // Cleared when they open a different app — ensures the reminder re-fires for new apps.

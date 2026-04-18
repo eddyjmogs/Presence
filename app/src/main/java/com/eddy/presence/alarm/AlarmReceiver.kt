@@ -33,23 +33,19 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     private fun vibrate(context: Context) {
-        // Pattern: wait 0ms, vibrate 800ms, pause 400ms — repeat from index 0 until cancelled
-        val pattern = longArrayOf(0, 800, 400)
+        val effect = VibrationEffect.createOneShot(3_000, VibrationEffect.DEFAULT_AMPLITUDE)
         val audioAttr = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ALARM)
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            manager.defaultVibrator.vibrate(
-                VibrationEffect.createWaveform(pattern, 0),
-                audioAttr,
-            )
+            manager.defaultVibrator.vibrate(effect, audioAttr)
         } else {
             @Suppress("DEPRECATION")
             val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
             @Suppress("DEPRECATION")
-            vibrator.vibrate(VibrationEffect.createWaveform(pattern, 0), audioAttr)
+            vibrator.vibrate(effect, audioAttr)
         }
     }
 }

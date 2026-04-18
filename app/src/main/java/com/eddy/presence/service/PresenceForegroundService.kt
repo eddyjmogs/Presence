@@ -13,7 +13,9 @@ import android.media.AudioManager
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -124,11 +126,9 @@ class PresenceForegroundService : Service() {
             .setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            ringtone.isLooping = true
-        }
         ringtone.play()
         activeRingtone = ringtone
+        Handler(Looper.getMainLooper()).postDelayed({ stopAlarmRingtone() }, 3_000)
     }
 
     private fun stopAlarmRingtone() {

@@ -28,8 +28,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.eddy.presence.NotifyType
 import com.eddy.presence.intervalLabel
 import com.eddy.presence.ui.theme.PresenceTheme
 import com.eddy.presence.ui.whitelist.WhitelistManagerActivity
@@ -83,10 +84,7 @@ class SettingsActivity : ComponentActivity() {
                     uiState = uiState.copy(customContextNames = customContextNames),
                     onBack = ::finish,
                     onSetInterval = viewModel::setDefaultInterval,
-                    onSetNotifyAlarm = viewModel::setNotifyAlarm,
-                    onSetNotifyVibration = viewModel::setNotifyVibration,
-                    onSetNotifyFlashlight = viewModel::setNotifyFlashlight,
-                    onSetNotifySilent = viewModel::setNotifySilent,
+                    onSetNotifyType = viewModel::setNotifyType,
                     onAddContext = viewModel::showCreateContextDialog,
                     onDeleteContext = viewModel::deleteContext,
                     onCreateContext = viewModel::createContext,
@@ -103,7 +101,7 @@ class SettingsActivity : ComponentActivity() {
     }
 }
 
-private val INTERVAL_PRESETS = listOf(-10, 1, 10, 15, 25, 30, 45, 60, 90)
+private val INTERVAL_PRESETS = listOf(-10, 1, 2, 3, 5, 7, 10, 15, 25, 30, 45, 60, 90)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -111,10 +109,7 @@ private fun SettingsScreen(
     uiState: SettingsUiState,
     onBack: () -> Unit,
     onSetInterval: (Int) -> Unit,
-    onSetNotifyAlarm: (Boolean) -> Unit,
-    onSetNotifyVibration: (Boolean) -> Unit,
-    onSetNotifyFlashlight: (Boolean) -> Unit,
-    onSetNotifySilent: (Boolean) -> Unit,
+    onSetNotifyType: (NotifyType) -> Unit,
     onAddContext: () -> Unit,
     onDeleteContext: (String) -> Unit,
     onCreateContext: (String) -> Unit,
@@ -191,10 +186,20 @@ private fun SettingsScreen(
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
             Spacer(modifier = Modifier.height(4.dp))
-            CheckRow("Alarm", uiState.notifyAlarm, onSetNotifyAlarm)
-            CheckRow("Vibration", uiState.notifyVibration, onSetNotifyVibration)
-            CheckRow("Flashlight", uiState.notifyFlashlight, onSetNotifyFlashlight)
-            CheckRow("Silent", uiState.notifySilent, onSetNotifySilent)
+            NotifyType.entries.forEach { type ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = uiState.notifyType == type,
+                        onClick = { onSetNotifyType(type) },
+                    )
+                    Text(type.name, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
 
             SectionDivider()
 
@@ -271,18 +276,6 @@ private fun CustomContextRow(name: String, onManage: () -> Unit, onDelete: () ->
     }
 }
 
-@Composable
-private fun CheckRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
-        Text(label, style = MaterialTheme.typography.bodyLarge)
-    }
-}
 
 @Composable
 private fun PermissionsSection(context: Context) {

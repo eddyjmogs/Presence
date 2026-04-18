@@ -1,6 +1,7 @@
 package com.eddy.presence.ui.overlay
 
 import androidx.lifecycle.ViewModel
+import com.eddy.presence.NotifyType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,15 +15,12 @@ enum class OverlayScenario {
 
 data class OverlayUiState(
     val scenario: OverlayScenario = OverlayScenario.OnTime,
-    val setMinutes: Int = 0,      // how long the interval was set for (0 = unknown on first check-in)
-    val elapsedMinutes: Int = 0,  // how long it's actually been
+    val setMinutes: Int = 0,
+    val elapsedMinutes: Int = 0,
     val didText: String = "",
     val nextFocusText: String = "",
     val intervalMinutes: Int = 25,
-    val notifyAlarm: Boolean = true,
-    val notifyVibration: Boolean = false,
-    val notifyFlashlight: Boolean = false,
-    val notifySilent: Boolean = false,
+    val notifyType: NotifyType = NotifyType.Silent,
     val notes: String = "",
 ) {
     val canConfirm: Boolean get() = didText.isNotBlank() && nextFocusText.isNotBlank()
@@ -32,6 +30,12 @@ data class OverlayUiState(
         OverlayScenario.Away -> "What did you do during that time?"
         OverlayScenario.OnTime -> "What did you work on?"
     }
+
+    // Kept for backward-compat with onConfirm store writes and LogEntry insert
+    val notifyAlarm get() = notifyType == NotifyType.Alarm
+    val notifyVibration get() = notifyType == NotifyType.Vibration
+    val notifyFlashlight get() = notifyType == NotifyType.Flashlight
+    val notifySilent get() = notifyType == NotifyType.Silent
 }
 
 class OverlayViewModel : ViewModel() {
@@ -39,12 +43,13 @@ class OverlayViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(OverlayUiState())
     val uiState: StateFlow<OverlayUiState> = _uiState.asStateFlow()
 
-    fun init(scenario: OverlayScenario, setMinutes: Int, elapsedMinutes: Int) {
+    fun init(scenario: OverlayScenario, setMinutes: Int, elapsedMinutes: Int, notifyType: NotifyType) {
         _uiState.update {
             it.copy(
                 scenario = scenario,
                 setMinutes = setMinutes,
                 elapsedMinutes = elapsedMinutes,
+                notifyType = notifyType,
             )
         }
     }
@@ -53,18 +58,5 @@ class OverlayViewModel : ViewModel() {
     fun onNextFocusChange(text: String) = _uiState.update { it.copy(nextFocusText = text) }
     fun onIntervalChange(minutes: Int) = _uiState.update { it.copy(intervalMinutes = minutes) }
     fun onNotesChange(text: String) = _uiState.update { it.copy(notes = text) }
-
-    fun onNotifyAlarmToggle() = _uiState.update { it.copy(notifyAlarm = !it.notifyAlarm, notifySilent = false) }
-    fun onNotifyVibrationToggle() = _uiState.update { it.copy(notifyVibration = !it.notifyVibration, notifySilent = false) }
-    fun onNotifyFlashlightToggle() = _uiState.update { it.copy(notifyFlashlight = !it.notifyFlashlight, notifySilent = false) }
-    fun onNotifySilentToggle() = _uiState.update {
-        val nowSilent = !it.notifySilent
-        // Silent is exclusive — checking it clears the others
-        it.copy(
-            notifySilent = nowSilent,
-            notifyAlarm = if (nowSilent) false else it.notifyAlarm,
-            notifyVibration = if (nowSilent) false else it.notifyVibration,
-            notifyFlashlight = if (nowSilent) false else it.notifyFlashlight,
-        )
-    }
+    fun onNotifyTypeChange(type: NotifyType) = _uiState.update { it.copy(notifyType = type) }
 }

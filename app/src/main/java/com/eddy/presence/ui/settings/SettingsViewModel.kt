@@ -3,6 +3,7 @@ package com.eddy.presence.ui.settings
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.eddy.presence.NotifyType
 import com.eddy.presence.PresenceApplication
 import com.eddy.presence.state.SessionStateStore
 import kotlinx.coroutines.Dispatchers
@@ -18,10 +19,7 @@ import kotlinx.coroutines.launch
 data class SettingsUiState(
     val customContextNames: List<String> = emptyList(),
     val defaultIntervalMinutes: Int = 25,
-    val notifyAlarm: Boolean = true,
-    val notifyVibration: Boolean = false,
-    val notifyFlashlight: Boolean = false,
-    val notifySilent: Boolean = false,
+    val notifyType: NotifyType = NotifyType.Silent,
     val showCreateContextDialog: Boolean = false,
 )
 
@@ -35,10 +33,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _uiState = MutableStateFlow(
         SettingsUiState(
             defaultIntervalMinutes = store.intervalMinutes,
-            notifyAlarm = store.notifyAlarm,
-            notifyVibration = store.notifyVibration,
-            notifyFlashlight = store.notifyFlashlight,
-            notifySilent = store.notifySilent,
+            notifyType = store.notifyType,
         )
     )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -52,24 +47,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(defaultIntervalMinutes = minutes) }
     }
 
-    fun setNotifyAlarm(enabled: Boolean) {
-        store.notifyAlarm = enabled
-        _uiState.update { it.copy(notifyAlarm = enabled) }
-    }
-
-    fun setNotifyVibration(enabled: Boolean) {
-        store.notifyVibration = enabled
-        _uiState.update { it.copy(notifyVibration = enabled) }
-    }
-
-    fun setNotifyFlashlight(enabled: Boolean) {
-        store.notifyFlashlight = enabled
-        _uiState.update { it.copy(notifyFlashlight = enabled) }
-    }
-
-    fun setNotifySilent(enabled: Boolean) {
-        store.notifySilent = enabled
-        _uiState.update { it.copy(notifySilent = enabled) }
+    fun setNotifyType(type: NotifyType) {
+        store.notifyType = type
+        _uiState.update { it.copy(notifyType = type) }
     }
 
     fun showCreateContextDialog() = _uiState.update { it.copy(showCreateContextDialog = true) }

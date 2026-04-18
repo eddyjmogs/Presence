@@ -21,8 +21,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import com.eddy.presence.NotifyType
 import com.eddy.presence.PresenceApplication
 import com.eddy.presence.intervalLabel
 import com.eddy.presence.intervalToMs
@@ -71,7 +72,8 @@ class DeepWorkOverlayActivity : ComponentActivity() {
             ?: OverlayScenario.OnTime
         val setMinutes = intent.getIntExtra(EXTRA_SET_MINUTES, 0)
         val elapsedMinutes = intent.getIntExtra(EXTRA_ELAPSED_MINUTES, 0)
-        viewModel.init(scenario, setMinutes, elapsedMinutes)
+        val store = com.eddy.presence.state.SessionStateStore(this)
+        viewModel.init(scenario, setMinutes, elapsedMinutes, store.notifyType)
 
         setContent {
             PresenceTheme {
@@ -82,10 +84,7 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                     onNextFocusChange = viewModel::onNextFocusChange,
                     onIntervalChange = viewModel::onIntervalChange,
                     onNotesChange = viewModel::onNotesChange,
-                    onNotifyAlarmToggle = viewModel::onNotifyAlarmToggle,
-                    onNotifyVibrationToggle = viewModel::onNotifyVibrationToggle,
-                    onNotifyFlashlightToggle = viewModel::onNotifyFlashlightToggle,
-                    onNotifySilentToggle = viewModel::onNotifySilentToggle,
+                    onNotifyTypeChange = viewModel::onNotifyTypeChange,
                     onConfirm = {
                         val state = viewModel.uiState.value
                         val now = System.currentTimeMillis()
@@ -165,10 +164,7 @@ private fun OverlayScreen(
     onNextFocusChange: (String) -> Unit,
     onIntervalChange: (Int) -> Unit,
     onNotesChange: (String) -> Unit,
-    onNotifyAlarmToggle: () -> Unit,
-    onNotifyVibrationToggle: () -> Unit,
-    onNotifyFlashlightToggle: () -> Unit,
-    onNotifySilentToggle: () -> Unit,
+    onNotifyTypeChange: (NotifyType) -> Unit,
     onConfirm: () -> Unit,
 ) {
     Surface(
@@ -223,14 +219,8 @@ private fun OverlayScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             NotificationTypeRow(
-                alarm = uiState.notifyAlarm,
-                vibration = uiState.notifyVibration,
-                flashlight = uiState.notifyFlashlight,
-                silent = uiState.notifySilent,
-                onAlarmToggle = onNotifyAlarmToggle,
-                onVibrationToggle = onNotifyVibrationToggle,
-                onFlashlightToggle = onNotifyFlashlightToggle,
-                onSilentToggle = onNotifySilentToggle,
+                selected = uiState.notifyType,
+                onSelect = onNotifyTypeChange,
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -291,7 +281,7 @@ private fun formatDuration(minutes: Int): String {
     return if (remainder == 0) "$hours hr" else "$hours hr $remainder min"
 }
 
-private val INTERVAL_PRESETS = listOf(-10, 1, 10, 15, 25, 30, 45, 60, 90)
+private val INTERVAL_PRESETS = listOf(-10, 1, 2, 3, 5, 7, 10, 15, 25, 30, 45, 60, 90)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -316,28 +306,22 @@ private fun IntervalPicker(
 
 @Composable
 private fun NotificationTypeRow(
-    alarm: Boolean,
-    vibration: Boolean,
-    flashlight: Boolean,
-    silent: Boolean,
-    onAlarmToggle: () -> Unit,
-    onVibrationToggle: () -> Unit,
-    onFlashlightToggle: () -> Unit,
-    onSilentToggle: () -> Unit,
+    selected: NotifyType,
+    onSelect: (NotifyType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = alarm, onCheckedChange = { onAlarmToggle() })
-            Text("Alarm", modifier = Modifier.weight(1f))
-            Checkbox(checked = vibration, onCheckedChange = { onVibrationToggle() })
-            Text("Vibration", modifier = Modifier.weight(1f))
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = flashlight, onCheckedChange = { onFlashlightToggle() })
-            Text("Flashlight", modifier = Modifier.weight(1f))
-            Checkbox(checked = silent, onCheckedChange = { onSilentToggle() })
-            Text("Silent", modifier = Modifier.weight(1f))
+        NotifyType.entries.forEach { type ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                RadioButton(
+                    selected = selected == type,
+                    onClick = { onSelect(type) },
+                )
+                Text(type.name, style = MaterialTheme.typography.bodyLarge)
+            }
         }
     }
 }
