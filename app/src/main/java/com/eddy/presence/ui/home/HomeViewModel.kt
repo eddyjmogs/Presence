@@ -1,29 +1,32 @@
 package com.eddy.presence.ui.home
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.eddy.presence.PresenceApplication
+import com.eddy.presence.data.model.LogEntry
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-
-data class LogEntry(
-    val time: String,
-    val summary: String,
-    val mode: LogMode,
-)
-
-enum class LogMode { DEEP_WORK, FOCUS }
 
 data class HomeUiState(
     val taskText: String = "",
     val focusModeExpanded: Boolean = false,
-    val logEntries: List<LogEntry> = emptyList(),
 )
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val repository = (application as PresenceApplication).logRepository
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    val todayEntries: StateFlow<List<LogEntry>> = repository
+        .getEntriesForToday()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun onTaskTextChange(text: String) {
         _uiState.update { it.copy(taskText = text) }

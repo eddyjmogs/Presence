@@ -34,10 +34,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import com.eddy.presence.PresenceApplication
 import com.eddy.presence.alarm.AlarmScheduler
+import com.eddy.presence.data.model.LogEntry
 import com.eddy.presence.service.PresenceForegroundService
 import com.eddy.presence.state.SessionStateStore
 import com.eddy.presence.ui.theme.PresenceTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class DeepWorkOverlayActivity : ComponentActivity() {
 
@@ -99,6 +104,23 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                             this@DeepWorkOverlayActivity,
                             now + state.intervalMinutes * 60_000L,
                         )
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            val repo = (application as PresenceApplication).logRepository
+                            repo.insert(LogEntry(
+                                timestamp = now,
+                                mode = "DEEP_WORK",
+                                scenario = state.scenario.name,
+                                taskName = store.currentTask,
+                                didText = state.didText,
+                                nextFocusText = state.nextFocusText,
+                                intervalMinutes = state.intervalMinutes,
+                                notifyAlarm = state.notifyAlarm,
+                                notifyVibration = state.notifyVibration,
+                                notifyFlashlight = state.notifyFlashlight,
+                                notifySilent = state.notifySilent,
+                                notes = state.notes,
+                            ))
+                        }
                         finish()
                     },
                 )

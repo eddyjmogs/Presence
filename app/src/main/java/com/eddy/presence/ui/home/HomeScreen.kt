@@ -30,8 +30,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.eddy.presence.data.model.LogEntry
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -41,6 +46,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val todayEntries by viewModel.todayEntries.collectAsState()
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -105,14 +111,14 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (uiState.logEntries.isEmpty()) {
+            if (todayEntries.isEmpty()) {
                 Text(
                     text = "No entries yet. Start a session to begin logging.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                uiState.logEntries.forEach { entry ->
+                todayEntries.forEach { entry ->
                     LogEntryRow(entry = entry)
                     Spacer(modifier = Modifier.height(6.dp))
                 }
@@ -173,22 +179,35 @@ private fun FocusModeOption(
     )
 }
 
+private val timeFormatter = SimpleDateFormat("h:mma", Locale.getDefault())
+
 @Composable
 private fun LogEntryRow(
     entry: LogEntry,
     modifier: Modifier = Modifier,
 ) {
+    val time = timeFormatter.format(Date(entry.timestamp)).lowercase()
+    val summary = buildString {
+        if (entry.didText.isNotBlank()) append("Did: ${entry.didText}")
+        if (entry.nextFocusText.isNotBlank()) {
+            if (isNotEmpty()) append(" | ")
+            append("Next: ${entry.nextFocusText}")
+        }
+    }
+
     Row(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = entry.time,
+            text = time,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(60.dp),
+            modifier = Modifier.width(64.dp),
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = entry.summary,
+            text = summary,
             style = MaterialTheme.typography.bodyMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
