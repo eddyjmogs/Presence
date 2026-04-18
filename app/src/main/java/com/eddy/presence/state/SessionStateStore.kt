@@ -70,6 +70,10 @@ class SessionStateStore(context: Context) {
         get() = prefs.getString(KEY_FOCUS_ALLOWED_PKG, "") ?: ""
         set(v) = prefs.edit().putString(KEY_FOCUS_ALLOWED_PKG, v).apply()
 
+    var onboardingDone: Boolean
+        get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
+        set(v) = prefs.edit().putBoolean(KEY_ONBOARDING_DONE, v).apply()
+
     fun clearSession() {
         prefs.edit()
             .putBoolean(KEY_DEEP_WORK_ACTIVE, false)
@@ -95,5 +99,6 @@ class SessionStateStore(context: Context) {
         private const val KEY_NOTIFY_FLASHLIGHT = "notify_flashlight"
         private const val KEY_NOTIFY_SILENT = "notify_silent"
         private const val KEY_FOCUS_ALLOWED_PKG = "focus_allowed_pkg"
+        private const val KEY_ONBOARDING_DONE = "onboarding_done"
     }
 }

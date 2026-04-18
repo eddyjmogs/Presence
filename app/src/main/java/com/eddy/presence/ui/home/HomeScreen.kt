@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +52,7 @@ import java.util.Locale
 fun HomeScreen(
     onStartDeepWork: (task: String) -> Unit,
     onStartFocusMode: (context: String) -> Unit,
+    onStopSession: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(),
 ) {
@@ -69,6 +71,11 @@ fun HomeScreen(
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.Top,
         ) {
+            if (uiState.session.isActive) {
+                SessionBanner(session = uiState.session, onStop = onStopSession)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             Text(
                 text = "Presence",
                 style = MaterialTheme.typography.headlineLarge,
@@ -156,6 +163,49 @@ fun HomeScreen(
             onConfirm = viewModel::createContext,
             onDismiss = viewModel::dismissCreateContextDialog,
         )
+    }
+}
+
+@Composable
+private fun SessionBanner(session: ActiveSession, onStop: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            val title = when {
+                session.deepWorkActive -> "Deep Work active"
+                session.focusModeActive -> "Focus Mode: ${session.focusModeContext}"
+                else -> ""
+            }
+            val subtitle = if (session.deepWorkActive && session.currentTask.isNotBlank())
+                session.currentTask else null
+            Text(
+                text = "● $title",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Button(
+            onClick = onStop,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            ),
+        ) {
+            Text("Stop")
+        }
     }
 }
 

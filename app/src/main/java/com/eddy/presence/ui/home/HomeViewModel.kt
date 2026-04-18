@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.eddy.presence.PresenceApplication
 import com.eddy.presence.data.model.LogEntry
+import com.eddy.presence.state.SessionStateStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,10 +16,20 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+data class ActiveSession(
+    val deepWorkActive: Boolean = false,
+    val focusModeActive: Boolean = false,
+    val focusModeContext: String = "",
+    val currentTask: String = "",
+) {
+    val isActive get() = deepWorkActive || focusModeActive
+}
+
 data class HomeUiState(
     val taskText: String = "",
     val focusModeExpanded: Boolean = false,
     val showCreateContextDialog: Boolean = false,
+    val session: ActiveSession = ActiveSession(),
 )
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
@@ -39,32 +50,33 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         .map { list -> list.map { it.name } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun onTaskTextChange(text: String) {
-        _uiState.update { it.copy(taskText = text) }
+    fun refreshSessionState(store: SessionStateStore) {
+        _uiState.update {
+            it.copy(
+                session = ActiveSession(
+                    deepWorkActive = store.deepWorkActive,
+                    focusModeActive = store.focusModeActive,
+                    focusModeContext = store.focusModeContext,
+                    currentTask = store.currentTask,
+                )
+            )
+        }
     }
 
-    fun toggleFocusModeExpanded() {
-        _uiState.update { it.copy(focusModeExpanded = !it.focusModeExpanded) }
-    }
+    fun onTaskTextChange(text: String) = _uiState.update { it.copy(taskText = text) }
 
-    fun collapseFocusMode() {
-        _uiState.update { it.copy(focusModeExpanded = false) }
-    }
+    fun toggleFocusModeExpanded() = _uiState.update { it.copy(focusModeExpanded = !it.focusModeExpanded) }
 
-    fun showCreateContextDialog() {
-        _uiState.update { it.copy(showCreateContextDialog = true) }
-    }
+    fun collapseFocusMode() = _uiState.update { it.copy(focusModeExpanded = false) }
 
-    fun dismissCreateContextDialog() {
-        _uiState.update { it.copy(showCreateContextDialog = false) }
-    }
+    fun showCreateContextDialog() = _uiState.update { it.copy(showCreateContextDialog = true) }
+
+    fun dismissCreateContextDialog() = _uiState.update { it.copy(showCreateContextDialog = false) }
 
     fun createContext(name: String) {
         val trimmed = name.trim()
         if (trimmed.isBlank()) return
-        viewModelScope.launch(Dispatchers.IO) {
-            contextRepo.create(trimmed)
-        }
+        viewModelScope.launch(Dispatchers.IO) { contextRepo.create(trimmed) }
         dismissCreateContextDialog()
     }
 }
