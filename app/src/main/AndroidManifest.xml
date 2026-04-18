@@ -40,6 +40,10 @@
             android:turnScreenOn="true"
             android:theme="@style/Theme.Presence" />
 
+        <activity
+            android:name=".ui.whitelist.WhitelistManagerActivity"
+            android:exported="false" />
+
         <receiver
             android:name=".alarm.AlarmReceiver"
             android:exported="false" />

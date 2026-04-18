@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,11 +30,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.eddy.presence.data.model.LogEntry
+import com.eddy.presence.ui.whitelist.WhitelistManagerActivity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -88,12 +91,16 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            val ctx = LocalContext.current
             FocusModeSelector(
                 expanded = uiState.focusModeExpanded,
                 onToggle = viewModel::toggleFocusModeExpanded,
                 onContextSelected = { context ->
                     viewModel.collapseFocusMode()
                     onStartFocusMode(context)
+                },
+                onManageWhitelist = { contextName ->
+                    WhitelistManagerActivity.launch(ctx, contextName)
                 },
             )
 
@@ -132,6 +139,7 @@ private fun FocusModeSelector(
     expanded: Boolean,
     onToggle: () -> Unit,
     onContextSelected: (String) -> Unit,
+    onManageWhitelist: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -155,8 +163,16 @@ private fun FocusModeSelector(
 
         AnimatedVisibility(visible = expanded) {
             Column(modifier = Modifier.padding(start = 16.dp, top = 4.dp)) {
-                FocusModeOption(label = "🚇 Commute", onClick = { onContextSelected("Commute") })
-                FocusModeOption(label = "🚽 Bathroom", onClick = { onContextSelected("Bathroom") })
+                FocusModeOption(
+                    label = "🚇 Commute",
+                    onClick = { onContextSelected("Commute") },
+                    onManage = { onManageWhitelist("Commute") },
+                )
+                FocusModeOption(
+                    label = "🚽 Bathroom",
+                    onClick = { onContextSelected("Bathroom") },
+                    onManage = { onManageWhitelist("Bathroom") },
+                )
                 FocusModeOption(label = "+ Custom...", onClick = { onContextSelected("Custom") })
             }
         }
@@ -168,15 +184,31 @@ private fun FocusModeOption(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onManage: (() -> Unit)? = null,
 ) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.bodyLarge,
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
-    )
+    Row(
+        modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onClick)
+                .padding(vertical = 6.dp),
+        )
+        if (onManage != null) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Manage whitelist",
+                modifier = Modifier
+                    .clickable(onClick = onManage)
+                    .padding(8.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 private val timeFormatter = SimpleDateFormat("h:mma", Locale.getDefault())

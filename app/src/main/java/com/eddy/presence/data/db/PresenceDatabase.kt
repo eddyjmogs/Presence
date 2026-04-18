@@ -5,11 +5,13 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.eddy.presence.data.model.LogEntry
+import com.eddy.presence.data.model.WhitelistEntry
 
-@Database(entities = [LogEntry::class], version = 1, exportSchema = false)
+@Database(entities = [LogEntry::class, WhitelistEntry::class], version = 2, exportSchema = false)
 abstract class PresenceDatabase : RoomDatabase() {
 
     abstract fun logEntryDao(): LogEntryDao
+    abstract fun whitelistDao(): WhitelistDao
 
     companion object {
         @Volatile private var instance: PresenceDatabase? = null
@@ -20,7 +22,7 @@ abstract class PresenceDatabase : RoomDatabase() {
                     context.applicationContext,
                     PresenceDatabase::class.java,
                     "presence.db",
-                ).build().also { instance = it }
+                ).fallbackToDestructiveMigration(dropAllTables = true).build().also { instance = it }
             }
     }
 }
