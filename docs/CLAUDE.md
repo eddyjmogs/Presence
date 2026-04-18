@@ -145,7 +145,7 @@ app/src/main/
 | 11 | Focus Mode: AccessibilityService extension for whitelist checking | ✓ |
 | 12 | Focus Mode: Soft reminder screen | ✓ |
 | 13 | Focus Mode: Custom context creation | ✓ |
-| 14 | History screen (combined log, grouped by day) | ☐ |
+| 14 | History screen (combined log, grouped by day) | ✓ |
 | 15 | Settings screen | ☐ |
 | 16 | Polish: onboarding, permission prompts, edge cases, battery optimization | ☐ |
 
