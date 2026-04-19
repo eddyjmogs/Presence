@@ -65,6 +65,18 @@ class SessionStateStore(context: Context) {
         get() = prefs.getBoolean(KEY_NOTIFY_SILENT, true)
         set(v) = prefs.edit().putBoolean(KEY_NOTIFY_SILENT, v).apply()
 
+    var currentDidText: String
+        get() = prefs.getString(KEY_CURRENT_DID_TEXT, "") ?: ""
+        set(v) = prefs.edit().putString(KEY_CURRENT_DID_TEXT, v).apply()
+
+    var currentNextFocusText: String
+        get() = prefs.getString(KEY_CURRENT_NEXT_FOCUS, "") ?: ""
+        set(v) = prefs.edit().putString(KEY_CURRENT_NEXT_FOCUS, v).apply()
+
+    var currentNotes: String
+        get() = prefs.getString(KEY_CURRENT_NOTES, "") ?: ""
+        set(v) = prefs.edit().putString(KEY_CURRENT_NOTES, v).apply()
+
     var notifyType: NotifyType
         get() = when {
             notifyAlarm -> NotifyType.Alarm
@@ -95,6 +107,9 @@ class SessionStateStore(context: Context) {
             .putBoolean(KEY_TIMER_EXPIRED, false)
             .putBoolean(KEY_PENDING_ACK, false)
             .putLong(KEY_TIMER_START_TIME, 0L)
+            .putString(KEY_CURRENT_DID_TEXT, "")
+            .putString(KEY_CURRENT_NEXT_FOCUS, "")
+            .putString(KEY_CURRENT_NOTES, "")
             .apply()
     }
 
@@ -115,5 +130,8 @@ class SessionStateStore(context: Context) {
         private const val KEY_NOTIFY_SILENT = "notify_silent"
         private const val KEY_FOCUS_ALLOWED_PKG = "focus_allowed_pkg"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
+        private const val KEY_CURRENT_DID_TEXT = "current_did_text"
+        private const val KEY_CURRENT_NEXT_FOCUS = "current_next_focus"
+        private const val KEY_CURRENT_NOTES = "current_notes"
     }
 }

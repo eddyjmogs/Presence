@@ -73,7 +73,15 @@ class DeepWorkOverlayActivity : ComponentActivity() {
         val setMinutes = intent.getIntExtra(EXTRA_SET_MINUTES, 0)
         val elapsedMinutes = intent.getIntExtra(EXTRA_ELAPSED_MINUTES, 0)
         val store = com.eddy.presence.state.SessionStateStore(this)
-        viewModel.init(scenario, setMinutes, elapsedMinutes, store.notifyType)
+        viewModel.init(
+            scenario = scenario,
+            setMinutes = setMinutes,
+            elapsedMinutes = elapsedMinutes,
+            notifyType = store.notifyType,
+            didText = store.currentDidText,
+            nextFocusText = store.currentNextFocusText,
+            notes = store.currentNotes,
+        )
 
         setContent {
             PresenceTheme {
@@ -97,6 +105,9 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                         store.notifySilent = state.notifySilent
                         store.timerExpired = false
                         store.pendingAcknowledgement = false
+                        store.currentDidText = ""
+                        store.currentNextFocusText = ""
+                        store.currentNotes = ""
                         // Always stop alarm sound, vibration, and torch regardless of
                         // which notification type was active — torch in particular must
                         // never be left on.
@@ -112,7 +123,7 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                                 timestamp = now,
                                 mode = "DEEP_WORK",
                                 scenario = state.scenario.name,
-                                taskName = store.currentTask,
+                                taskName = "",
                                 didText = state.didText,
                                 nextFocusText = state.nextFocusText,
                                 intervalMinutes = state.intervalMinutes,

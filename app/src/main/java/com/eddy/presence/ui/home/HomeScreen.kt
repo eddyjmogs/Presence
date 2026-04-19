@@ -29,10 +29,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.eddy.presence.ui.history.HistoryActivity
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,9 +52,10 @@ import java.util.Locale
 
 @Composable
 fun HomeScreen(
-    onStartDeepWork: (task: String) -> Unit,
+    onStartDeepWork: () -> Unit,
     onStartFocusMode: (context: String) -> Unit,
     onStopSession: () -> Unit,
+    onViewSession: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(),
 ) {
@@ -60,6 +63,7 @@ fun HomeScreen(
     val todayEntries by viewModel.todayEntries.collectAsState()
     val customContextNames by viewModel.customContextNames.collectAsState()
     val countdownSeconds by viewModel.countdownSeconds.collectAsState()
+    val ctx = LocalContext.current
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -72,15 +76,6 @@ fun HomeScreen(
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.Top,
         ) {
-            if (uiState.session.isActive) {
-                SessionBanner(
-                    session = uiState.session,
-                    countdownSeconds = countdownSeconds,
-                    onStop = onStopSession,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
             Text(
                 text = "Presence",
                 style = MaterialTheme.typography.headlineLarge,
@@ -89,41 +84,46 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            OutlinedTextField(
-                value = uiState.taskText,
-                onValueChange = viewModel::onTaskTextChange,
-                label = { Text("Current task") },
-                placeholder = { Text("What are you working on?") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
+            if (uiState.session.deepWorkActive) {
+                SessionBanner(
+                    session = uiState.session,
+                    countdownSeconds = countdownSeconds,
+                    onViewSession = onViewSession,
+                    onStop = onStopSession,
+                )
+            } else {
+                Button(
+                    onClick = onStartDeepWork,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Start Deep Work Session")
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Button(
-                onClick = { onStartDeepWork(uiState.taskText) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = uiState.taskText.isNotBlank(),
-            ) {
-                Text("Start Deep Work Session")
+                FocusModeSelector(
+                    expanded = uiState.focusModeExpanded,
+                    customContextNames = customContextNames,
+                    onToggle = viewModel::toggleFocusModeExpanded,
+                    onContextSelected = { context ->
+                        viewModel.collapseFocusMode()
+                        onStartFocusMode(context)
+                    },
+                    onManageWhitelist = { contextName ->
+                        WhitelistManagerActivity.launch(ctx, contextName)
+                    },
+                    onAddCustom = viewModel::showCreateContextDialog,
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            val ctx = LocalContext.current
-            FocusModeSelector(
-                expanded = uiState.focusModeExpanded,
-                customContextNames = customContextNames,
-                onToggle = viewModel::toggleFocusModeExpanded,
-                onContextSelected = { context ->
-                    viewModel.collapseFocusMode()
-                    onStartFocusMode(context)
-                },
-                onManageWhitelist = { contextName ->
-                    WhitelistManagerActivity.launch(ctx, contextName)
-                },
-                onAddCustom = viewModel::showCreateContextDialog,
-            )
+            if (uiState.session.focusModeActive && !uiState.session.deepWorkActive) {
+                SessionBanner(
+                    session = uiState.session,
+                    countdownSeconds = countdownSeconds,
+                    onViewSession = {},
+                    onStop = onStopSession,
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -172,64 +172,87 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SessionBanner(session: ActiveSession, countdownSeconds: Long, onStop: () -> Unit) {
-    Row(
+private fun SessionBanner(
+    session: ActiveSession,
+    countdownSeconds: Long,
+    onViewSession: () -> Unit,
+    onStop: () -> Unit,
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            val title = when {
-                session.deepWorkActive -> "Deep Work active"
-                session.focusModeActive -> "Focus Mode: ${session.focusModeContext}"
-                else -> ""
+        val title = when {
+            session.deepWorkActive -> "Deep Work active"
+            session.focusModeActive -> "Focus Mode: ${session.focusModeContext}"
+            else -> ""
+        }
+        Text(
+            text = "● $title",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        if (session.deepWorkActive) {
+            val isPending = session.timerExpired || countdownSeconds == 0L
+            val countdownText = when {
+                countdownSeconds < 0L -> null
+                isPending -> "Check-in pending"
+                else -> "Next check-in in %d:%02d".format(countdownSeconds / 60, countdownSeconds % 60)
             }
-            val subtitle = if (session.deepWorkActive && session.currentTask.isNotBlank())
-                session.currentTask else null
-            Text(
-                text = "● $title",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            if (subtitle != null) {
+            if (countdownText != null) {
                 Text(
-                    text = subtitle,
+                    text = countdownText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isPending) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        var showConfirm by remember { mutableStateOf(false) }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (session.deepWorkActive) {
-                val isPending = session.timerExpired || countdownSeconds == 0L
-                val countdownText = when {
-                    countdownSeconds < 0L -> null  // timer not yet initialized
-                    isPending -> "Check-in pending"
-                    else -> {
-                        val m = countdownSeconds / 60
-                        val s = countdownSeconds % 60
-                        "Next check-in in %d:%02d".format(m, s)
-                    }
-                }
-                if (countdownText != null) {
-                    Text(
-                        text = countdownText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isPending) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Button(
+                    onClick = onViewSession,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Open Session")
                 }
             }
+            Button(
+                onClick = { showConfirm = true },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
+            ) {
+                Text("Stop")
+            }
         }
-        Button(
-            onClick = onStop,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            ),
-        ) {
-            Text("Stop")
+
+        if (showConfirm) {
+            AlertDialog(
+                onDismissRequest = { showConfirm = false },
+                title = { Text("End session?") },
+                text = { Text("Your current interval won't be logged.") },
+                confirmButton = {
+                    Button(
+                        onClick = { showConfirm = false; onStop() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                        ),
+                    ) { Text("End Session") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showConfirm = false }) { Text("Cancel") }
+                },
+            )
         }
     }
 }

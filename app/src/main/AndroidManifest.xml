@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".PresenceApplication"
@@ -42,6 +43,10 @@
             android:theme="@style/Theme.Presence" />
 
         <activity
+            android:name=".ui.session.DeepWorkSessionActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.whitelist.WhitelistManagerActivity"
             android:exported="false" />
 
@@ -63,6 +68,14 @@
         <receiver
             android:name=".alarm.AlarmReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <service
             android:name=".service.PresenceForegroundService"

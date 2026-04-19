@@ -31,7 +31,7 @@ data class OverlayUiState(
         OverlayScenario.OnTime -> "What did you work on?"
     }
 
-    // Kept for backward-compat with onConfirm store writes and LogEntry insert
+    // Kept for onConfirm store writes and LogEntry insert
     val notifyAlarm get() = notifyType == NotifyType.Alarm
     val notifyVibration get() = notifyType == NotifyType.Vibration
     val notifyFlashlight get() = notifyType == NotifyType.Flashlight
@@ -43,13 +43,24 @@ class OverlayViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(OverlayUiState())
     val uiState: StateFlow<OverlayUiState> = _uiState.asStateFlow()
 
-    fun init(scenario: OverlayScenario, setMinutes: Int, elapsedMinutes: Int, notifyType: NotifyType) {
+    fun init(
+        scenario: OverlayScenario,
+        setMinutes: Int,
+        elapsedMinutes: Int,
+        notifyType: NotifyType,
+        didText: String = "",
+        nextFocusText: String = "",
+        notes: String = "",
+    ) {
         _uiState.update {
             it.copy(
                 scenario = scenario,
                 setMinutes = setMinutes,
                 elapsedMinutes = elapsedMinutes,
                 notifyType = notifyType,
+                didText = didText,
+                nextFocusText = nextFocusText,
+                notes = notes,
             )
         }
     }

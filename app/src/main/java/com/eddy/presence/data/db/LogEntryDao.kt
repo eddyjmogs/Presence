@@ -12,9 +12,9 @@ interface LogEntryDao {
     @Insert
     suspend fun insert(entry: LogEntry)
 
-    @Query("SELECT * FROM log_entries WHERE timestamp >= :startOfDay ORDER BY timestamp ASC")
+    @Query("SELECT * FROM log_entries WHERE timestamp >= :startOfDay ORDER BY timestamp DESC LIMIT 20")
     fun getEntriesForDay(startOfDay: Long): Flow<List<LogEntry>>
 
-    @Query("SELECT * FROM log_entries ORDER BY timestamp DESC")
+    @Query("SELECT * FROM log_entries ORDER BY timestamp DESC LIMIT 200")
     fun getAllEntries(): Flow<List<LogEntry>>
 }

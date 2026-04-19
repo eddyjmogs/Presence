@@ -32,10 +32,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.eddy.presence.data.model.LogEntry
 import com.eddy.presence.service.PresenceForegroundService
 import com.eddy.presence.state.SessionStateStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.eddy.presence.ui.home.HomeScreen
 import com.eddy.presence.ui.home.HomeViewModel
+import com.eddy.presence.ui.session.DeepWorkSessionActivity
 import com.eddy.presence.ui.settings.SettingsActivity
 import com.eddy.presence.ui.theme.PresenceTheme
 
@@ -53,7 +58,7 @@ class MainActivity : ComponentActivity() {
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) pendingTask?.let { launchDeepWork(it) }
+        if (granted) launchDeepWork()
         pendingTask = null
     }
 
@@ -77,9 +82,10 @@ class MainActivity : ComponentActivity() {
                     },
                 ) { innerPadding ->
                     HomeScreen(
-                        onStartDeepWork = { task -> startDeepWork(task) },
+                        onStartDeepWork = { startDeepWork() },
                         onStartFocusMode = { context -> startFocusMode(context) },
                         onStopSession = { stopCurrentSession() },
+                        onViewSession = { DeepWorkSessionActivity.launch(this@MainActivity) },
                         modifier = Modifier.padding(innerPadding),
                         viewModel = homeViewModel,
                     )
@@ -152,7 +158,7 @@ class MainActivity : ComponentActivity() {
         if (!store.onboardingDone) showOnboarding = true
     }
 
-    private fun startDeepWork(task: String) {
+    private fun startDeepWork() {
         if (!Settings.canDrawOverlays(this)) {
             showOverlayPermissionDialog = true
             return
@@ -166,26 +172,23 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
-            pendingTask = task
+            pendingTask = ""
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             return
         }
-        launchDeepWork(task)
+        launchDeepWork()
     }
 
-    private fun launchDeepWork(task: String) {
-        PresenceForegroundService.startDeepWork(this, task)
-        // Optimistic state update — service will write the same values once it starts.
-        // We write timerStartTime here so the countdown renders immediately on return.
+    private fun launchDeepWork() {
+        PresenceForegroundService.startDeepWork(this)
         val now = System.currentTimeMillis()
         val store = SessionStateStore(this)
-        homeViewModel.refreshSessionState(store.also {
-            it.deepWorkActive = true
-            it.currentTask = task
-            it.timerStartTime = now
-            it.timerExpired = false
-            it.pendingAcknowledgement = false
-        })
+        store.deepWorkActive = true
+        store.timerStartTime = now
+        store.timerExpired = false
+        store.pendingAcknowledgement = false
+        homeViewModel.refreshSessionState(store)
+        DeepWorkSessionActivity.launch(this)
     }
 
     private fun startFocusMode(contextName: String) {
@@ -206,6 +209,35 @@ class MainActivity : ComponentActivity() {
         val store = SessionStateStore(this)
         when {
             store.deepWorkActive -> {
+                val now = System.currentTimeMillis()
+                val didText = store.currentDidText
+                val nextFocusText = store.currentNextFocusText
+                val notes = store.currentNotes
+                val intervalMinutes = store.intervalMinutes
+                val notifyAlarm = store.notifyAlarm
+                val notifyVibration = store.notifyVibration
+                val notifyFlashlight = store.notifyFlashlight
+                val notifySilent = store.notifySilent
+                if (didText.isNotBlank() || nextFocusText.isNotBlank()) {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        (application as PresenceApplication).logRepository.insert(
+                            LogEntry(
+                                timestamp = now,
+                                mode = "DEEP_WORK",
+                                scenario = "Stopped",
+                                taskName = "",
+                                didText = didText,
+                                nextFocusText = nextFocusText,
+                                intervalMinutes = intervalMinutes,
+                                notifyAlarm = notifyAlarm,
+                                notifyVibration = notifyVibration,
+                                notifyFlashlight = notifyFlashlight,
+                                notifySilent = notifySilent,
+                                notes = notes,
+                            )
+                        )
+                    }
+                }
                 store.clearSession()
                 PresenceForegroundService.stop(this)
             }

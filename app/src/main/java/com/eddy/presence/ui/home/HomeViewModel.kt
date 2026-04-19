@@ -24,7 +24,6 @@ data class ActiveSession(
     val deepWorkActive: Boolean = false,
     val focusModeActive: Boolean = false,
     val focusModeContext: String = "",
-    val currentTask: String = "",
     val timerStartTime: Long = 0L,
     val intervalMinutes: Int = 0,
     val timerExpired: Boolean = false,
@@ -33,7 +32,6 @@ data class ActiveSession(
 }
 
 data class HomeUiState(
-    val taskText: String = "",
     val focusModeExpanded: Boolean = false,
     val showCreateContextDialog: Boolean = false,
     val session: ActiveSession = ActiveSession(),
@@ -77,7 +75,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     deepWorkActive = store.deepWorkActive,
                     focusModeActive = store.focusModeActive,
                     focusModeContext = store.focusModeContext,
-                    currentTask = store.currentTask,
                     timerStartTime = store.timerStartTime,
                     intervalMinutes = store.intervalMinutes,
                     timerExpired = store.timerExpired,
@@ -85,8 +82,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
     }
-
-    fun onTaskTextChange(text: String) = _uiState.update { it.copy(taskText = text) }
 
     fun toggleFocusModeExpanded() = _uiState.update { it.copy(focusModeExpanded = !it.focusModeExpanded) }
 

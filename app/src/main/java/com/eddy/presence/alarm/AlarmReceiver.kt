@@ -5,11 +5,14 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.os.Build
+import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import com.eddy.presence.service.PresenceForegroundService
 import com.eddy.presence.state.SessionStateStore
+import com.eddy.presence.ui.overlay.DeepWorkOverlayActivity
+import com.eddy.presence.ui.overlay.OverlayScenario
 
 class AlarmReceiver : BroadcastReceiver() {
 
@@ -18,17 +21,22 @@ class AlarmReceiver : BroadcastReceiver() {
         store.timerExpired = true
         store.pendingAcknowledgement = true
 
-        if (store.notifyFlashlight) {
-            TorchController.turnOn(context)
-        }
+        if (store.notifyFlashlight) TorchController.turnOn(context)
+        if (store.notifyVibration) vibrate(context)
+        if (store.notifyAlarm) PresenceForegroundService.fireAlarm(context)
 
-        if (store.notifyVibration) {
-            vibrate(context)
-        }
-
-        if (store.notifyAlarm) {
-            // Delegate looping ringtone to the service — it outlives this receiver
-            PresenceForegroundService.fireAlarm(context)
+        // If the screen is already on, launch the overlay immediately.
+        // When the screen is off, ScreenStateReceiver.onScreenOn() handles it.
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (pm.isInteractive) {
+            val elapsed = ((System.currentTimeMillis() - store.timerStartTime) / 60_000L)
+                .toInt().coerceAtLeast(1)
+            DeepWorkOverlayActivity.launch(
+                context = context,
+                scenario = OverlayScenario.OverTime,
+                setMinutes = store.intervalMinutes,
+                elapsedMinutes = elapsed,
+            )
         }
     }
 

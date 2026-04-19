@@ -49,26 +49,21 @@ class PresenceForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_DEEP_WORK -> {
-                val task = intent.getStringExtra(EXTRA_TASK) ?: ""
                 val now = System.currentTimeMillis()
                 val store = SessionStateStore(this)
                 store.deepWorkActive = true
-                store.currentTask = task
                 store.timerStartTime = now
                 store.timerExpired = false
                 store.pendingAcknowledgement = false
                 val endMs = now + intervalToMs(store.intervalMinutes)
                 AlarmScheduler.schedule(this, endMs)
-                startForeground(NOTIFICATION_ID, buildDeepWorkNotification(task, endMs))
+                startForeground(NOTIFICATION_ID, buildDeepWorkNotification(endMs))
             }
             ACTION_UPDATE_DEEP_WORK_NOTIFICATION -> {
                 val store = SessionStateStore(this)
                 if (store.deepWorkActive) {
                     val endMs = store.timerStartTime + intervalToMs(store.intervalMinutes)
-                    notificationManager.notify(
-                        NOTIFICATION_ID,
-                        buildDeepWorkNotification(store.currentTask, endMs),
-                    )
+                    notificationManager.notify(NOTIFICATION_ID, buildDeepWorkNotification(endMs))
                 }
             }
             ACTION_ALARM_FIRED -> {
@@ -175,21 +170,27 @@ class PresenceForegroundService : Service() {
             .build()
     }
 
-    private fun buildDeepWorkNotification(task: String, intervalEndMs: Long = 0L): Notification {
+    private fun buildDeepWorkNotification(intervalEndMs: Long = 0L): Notification {
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
-        val pendingIntent = PendingIntent.getActivity(
+        val contentPendingIntent = PendingIntent.getActivity(
             this, 0, openAppIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val contentText = if (task.isNotBlank()) "Working on: $task" else "Deep Work in progress"
-
+        val openSessionIntent = Intent(this, com.eddy.presence.ui.session.DeepWorkSessionActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val sessionPendingIntent = PendingIntent.getActivity(
+            this, 1, openSessionIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Deep Work")
-            .setContentText(contentText)
-            .setContentIntent(pendingIntent)
+            .setContentText("Session in progress")
+            .setContentIntent(contentPendingIntent)
+            .addAction(0, "Open Session", sessionPendingIntent)
             .setOngoing(true)
             .setShowWhen(true)
             .setUsesChronometer(true)
@@ -212,10 +213,10 @@ class PresenceForegroundService : Service() {
         private const val CHANNEL_ID = "presence_session"
         private const val NOTIFICATION_ID = 1
 
-        fun startDeepWork(context: Context, task: String) {
+        fun startDeepWork(context: Context) {
             context.startForegroundService(
                 Intent(context, PresenceForegroundService::class.java)
-                    .apply { action = ACTION_START_DEEP_WORK; putExtra(EXTRA_TASK, task) }
+                    .apply { action = ACTION_START_DEEP_WORK }
             )
         }
 
