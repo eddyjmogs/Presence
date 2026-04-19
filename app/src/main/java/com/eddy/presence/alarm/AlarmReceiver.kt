@@ -24,6 +24,7 @@ class AlarmReceiver : BroadcastReceiver() {
         if (store.notifyFlashlight) TorchController.turnOn(context)
         if (store.notifyVibration) vibrate(context)
         if (store.notifyAlarm) PresenceForegroundService.fireAlarm(context)
+        PresenceForegroundService.updateDeepWorkNotification(context)
 
         // If the screen is already on, launch the overlay immediately.
         // When the screen is off, ScreenStateReceiver.onScreenOn() handles it.

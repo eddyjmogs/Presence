@@ -18,4 +18,6 @@ data class LogEntry(
     val notifyFlashlight: Boolean = false,
     val notifySilent: Boolean = false,
     val notes: String = "",
+    val focusRating: String = "",
+    val sessionStartTime: Long = 0L,
 )

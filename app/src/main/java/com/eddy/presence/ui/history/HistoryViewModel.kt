@@ -5,10 +5,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.eddy.presence.PresenceApplication
 import com.eddy.presence.data.model.LogEntry
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -23,6 +25,10 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
     val history: StateFlow<List<DayGroup>> = repo.getAllEntries()
         .map { entries -> groupByDay(entries) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun delete(entry: LogEntry) {
+        viewModelScope.launch(Dispatchers.IO) { repo.delete(entry) }
+    }
 
     private fun groupByDay(entries: List<LogEntry>): List<DayGroup> {
         val today = startOfDay(System.currentTimeMillis())

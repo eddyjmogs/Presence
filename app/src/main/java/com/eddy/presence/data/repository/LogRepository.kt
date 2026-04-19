@@ -20,4 +20,6 @@ class LogRepository(private val dao: LogEntryDao) {
     fun getAllEntries(): Flow<List<LogEntry>> = dao.getAllEntries()
 
     suspend fun insert(entry: LogEntry) = dao.insert(entry)
+
+    suspend fun delete(entry: LogEntry) = dao.delete(entry)
 }

@@ -1,6 +1,7 @@
 package com.eddy.presence.ui.overlay
 
 import androidx.lifecycle.ViewModel
+import com.eddy.presence.FocusRating
 import com.eddy.presence.NotifyType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,8 +23,9 @@ data class OverlayUiState(
     val intervalMinutes: Int = 25,
     val notifyType: NotifyType = NotifyType.Silent,
     val notes: String = "",
+    val focusRating: FocusRating? = null,
 ) {
-    val canConfirm: Boolean get() = didText.isNotBlank() && nextFocusText.isNotBlank()
+    val canConfirm: Boolean get() = didText.isNotBlank() && nextFocusText.isNotBlank() && focusRating != null
 
     val didLabel: String get() = when (scenario) {
         OverlayScenario.OverTime -> "What happened / what did you work on?"
@@ -70,4 +72,5 @@ class OverlayViewModel : ViewModel() {
     fun onIntervalChange(minutes: Int) = _uiState.update { it.copy(intervalMinutes = minutes) }
     fun onNotesChange(text: String) = _uiState.update { it.copy(notes = text) }
     fun onNotifyTypeChange(type: NotifyType) = _uiState.update { it.copy(notifyType = type) }
+    fun onFocusRatingChange(rating: FocusRating) = _uiState.update { it.copy(focusRating = rating) }
 }

@@ -31,11 +31,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.eddy.presence.FocusRating
 import com.eddy.presence.data.model.LogEntry
+import com.eddy.presence.intervalToMs
 import com.eddy.presence.service.PresenceForegroundService
 import com.eddy.presence.state.SessionStateStore
 import com.eddy.presence.ui.home.HomeScreen
 import com.eddy.presence.ui.home.HomeViewModel
+import com.eddy.presence.ui.overlay.DeepWorkOverlayActivity
+import com.eddy.presence.ui.overlay.OverlayScenario
 import com.eddy.presence.ui.session.DeepWorkSessionActivity
 import com.eddy.presence.ui.settings.SettingsActivity
 import com.eddy.presence.ui.theme.PresenceTheme
@@ -78,7 +82,7 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     HomeScreen(
                         onStartDeepWork = { startDeepWork() },
-                        onStopSession = { stopCurrentSession() },
+                        onStopSession = { rating -> stopCurrentSession(rating) },
                         onViewSession = { DeepWorkSessionActivity.launch(this@MainActivity) },
                         modifier = Modifier.padding(innerPadding),
                         viewModel = homeViewModel,
@@ -131,6 +135,22 @@ class MainActivity : ComponentActivity() {
         val store = SessionStateStore(this)
         homeViewModel.refreshSessionState(store)
         if (!store.onboardingDone) showOnboarding = true
+        maybeShowPendingOverlay(store)
+    }
+
+    private fun maybeShowPendingOverlay(store: SessionStateStore) {
+        if (!store.deepWorkActive || store.timerStartTime == 0L) return
+        val now = System.currentTimeMillis()
+        val endMs = store.timerStartTime + intervalToMs(store.intervalMinutes)
+        val alreadyExpired = store.pendingAcknowledgement
+        val silentlyMissed = !alreadyExpired && now > endMs
+        if (!alreadyExpired && !silentlyMissed) return
+        if (silentlyMissed) {
+            store.timerExpired = true
+            store.pendingAcknowledgement = true
+        }
+        val elapsedMinutes = ((now - store.timerStartTime) / 60_000L).toInt().coerceAtLeast(1)
+        DeepWorkOverlayActivity.launch(this, OverlayScenario.OverTime, store.intervalMinutes, elapsedMinutes)
     }
 
     private fun startDeepWork() {
@@ -165,13 +185,14 @@ class MainActivity : ComponentActivity() {
         DeepWorkSessionActivity.launch(this)
     }
 
-    private fun stopCurrentSession() {
+    private fun stopCurrentSession(rating: FocusRating) {
         val store = SessionStateStore(this)
         val now = System.currentTimeMillis()
         val didText = store.currentDidText
         val nextFocusText = store.currentNextFocusText
         val notes = store.currentNotes
         val intervalMinutes = store.intervalMinutes
+        val sessionStartTime = store.timerStartTime
         val notifyAlarm = store.notifyAlarm
         val notifyVibration = store.notifyVibration
         val notifyFlashlight = store.notifyFlashlight
@@ -192,6 +213,8 @@ class MainActivity : ComponentActivity() {
                         notifyFlashlight = notifyFlashlight,
                         notifySilent = notifySilent,
                         notes = notes,
+                        focusRating = rating.name,
+                        sessionStartTime = sessionStartTime,
                     )
                 )
             }

@@ -17,18 +17,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,12 +41,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.eddy.presence.FocusRating
 import com.eddy.presence.PresenceApplication
 import com.eddy.presence.alarm.AlarmScheduler
 import com.eddy.presence.data.model.LogEntry
 import com.eddy.presence.intervalLabel
+import com.eddy.presence.intervalToMs
 import com.eddy.presence.service.PresenceForegroundService
 import com.eddy.presence.state.SessionStateStore
+import com.eddy.presence.ui.overlay.DeepWorkOverlayActivity
+import com.eddy.presence.ui.overlay.OverlayScenario
 import com.eddy.presence.ui.theme.PresenceTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -64,13 +72,14 @@ class DeepWorkSessionActivity : ComponentActivity() {
                     onDidTextChange = viewModel::onDidTextChange,
                     onNextFocusChange = viewModel::onNextFocusChange,
                     onNotesChange = viewModel::onNotesChange,
-                    onStop = {
+                    onStop = { rating ->
                         val store = SessionStateStore(this)
                         val now = System.currentTimeMillis()
                         val didText = store.currentDidText
                         val nextFocusText = store.currentNextFocusText
                         val notes = store.currentNotes
                         val intervalMinutes = store.intervalMinutes
+                        val sessionStartTime = store.timerStartTime
                         val notifyAlarm = store.notifyAlarm
                         val notifyVibration = store.notifyVibration
                         val notifyFlashlight = store.notifyFlashlight
@@ -91,6 +100,8 @@ class DeepWorkSessionActivity : ComponentActivity() {
                                         notifyFlashlight = notifyFlashlight,
                                         notifySilent = notifySilent,
                                         notes = notes,
+                                        focusRating = rating.name,
+                                        sessionStartTime = sessionStartTime,
                                     )
                                 )
                             }
@@ -112,6 +123,19 @@ class DeepWorkSessionActivity : ComponentActivity() {
             finish()
             return
         }
+        val now = System.currentTimeMillis()
+        val endMs = store.timerStartTime + intervalToMs(store.intervalMinutes)
+        val alreadyExpired = store.pendingAcknowledgement
+        val silentlyMissed = !alreadyExpired && store.timerStartTime > 0L && now > endMs
+        if (alreadyExpired || silentlyMissed) {
+            if (silentlyMissed) {
+                store.timerExpired = true
+                store.pendingAcknowledgement = true
+            }
+            val elapsedMinutes = ((now - store.timerStartTime) / 60_000L).toInt().coerceAtLeast(1)
+            DeepWorkOverlayActivity.launch(this, OverlayScenario.OverTime, store.intervalMinutes, elapsedMinutes)
+            return
+        }
         viewModel.refresh()
     }
 
@@ -125,7 +149,7 @@ class DeepWorkSessionActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun SessionScreen(
     uiState: SessionUiState,
@@ -134,7 +158,7 @@ private fun SessionScreen(
     onDidTextChange: (String) -> Unit,
     onNextFocusChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
-    onStop: () -> Unit,
+    onStop: (FocusRating) -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -216,6 +240,7 @@ private fun SessionScreen(
             Spacer(modifier = Modifier.height(40.dp))
 
             var showConfirm by remember { mutableStateOf(false) }
+            var selectedRating by remember { mutableStateOf<FocusRating?>(null) }
 
             Button(
                 onClick = { showConfirm = true },
@@ -230,12 +255,27 @@ private fun SessionScreen(
 
             if (showConfirm) {
                 AlertDialog(
-                    onDismissRequest = { showConfirm = false },
+                    onDismissRequest = { showConfirm = false; selectedRating = null },
                     title = { Text("End session?") },
-                    text = { Text("Your current interval won't be logged.") },
+                    text = {
+                        Column {
+                            Text("How focused were you?")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FocusRating.entries.forEach { rating ->
+                                    FilterChip(
+                                        selected = selectedRating == rating,
+                                        onClick = { selectedRating = rating },
+                                        label = { Text(rating.name) },
+                                    )
+                                }
+                            }
+                        }
+                    },
                     confirmButton = {
                         Button(
-                            onClick = onStop,
+                            onClick = { showConfirm = false; onStop(selectedRating!!) },
+                            enabled = selectedRating != null,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error,
                                 contentColor = MaterialTheme.colorScheme.onError,
@@ -243,7 +283,7 @@ private fun SessionScreen(
                         ) { Text("End Session") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showConfirm = false }) { Text("Cancel") }
+                        TextButton(onClick = { showConfirm = false; selectedRating = null }) { Text("Cancel") }
                     },
                 )
             }

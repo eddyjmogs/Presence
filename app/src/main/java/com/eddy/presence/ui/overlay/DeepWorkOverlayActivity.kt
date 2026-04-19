@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import com.eddy.presence.FocusRating
 import com.eddy.presence.NotifyType
 import com.eddy.presence.PresenceApplication
 import com.eddy.presence.intervalLabel
@@ -93,10 +94,12 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                     onIntervalChange = viewModel::onIntervalChange,
                     onNotesChange = viewModel::onNotesChange,
                     onNotifyTypeChange = viewModel::onNotifyTypeChange,
+                    onFocusRatingChange = viewModel::onFocusRatingChange,
                     onConfirm = {
                         val state = viewModel.uiState.value
                         val now = System.currentTimeMillis()
                         val store = SessionStateStore(this@DeepWorkOverlayActivity)
+                        val intervalStartTime = store.timerStartTime
                         store.intervalMinutes = state.intervalMinutes
                         store.timerStartTime = now
                         store.notifyAlarm = state.notifyAlarm
@@ -132,6 +135,8 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                                 notifyFlashlight = state.notifyFlashlight,
                                 notifySilent = state.notifySilent,
                                 notes = state.notes,
+                                focusRating = state.focusRating?.name ?: "",
+                                sessionStartTime = intervalStartTime,
                             ))
                         }
                         finish()
@@ -150,19 +155,25 @@ class DeepWorkOverlayActivity : ComponentActivity() {
         private const val EXTRA_SET_MINUTES = "extra_set_minutes"
         private const val EXTRA_ELAPSED_MINUTES = "extra_elapsed_minutes"
 
+        fun buildIntent(
+            context: Context,
+            scenario: OverlayScenario = OverlayScenario.OnTime,
+            setMinutes: Int = 0,
+            elapsedMinutes: Int = 0,
+        ): Intent = Intent(context, DeepWorkOverlayActivity::class.java).apply {
+            putExtra(EXTRA_SCENARIO, scenario.name)
+            putExtra(EXTRA_SET_MINUTES, setMinutes)
+            putExtra(EXTRA_ELAPSED_MINUTES, elapsedMinutes)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        }
+
         fun launch(
             context: Context,
             scenario: OverlayScenario = OverlayScenario.OnTime,
             setMinutes: Int = 0,
             elapsedMinutes: Int = 0,
         ) {
-            val intent = Intent(context, DeepWorkOverlayActivity::class.java).apply {
-                putExtra(EXTRA_SCENARIO, scenario.name)
-                putExtra(EXTRA_SET_MINUTES, setMinutes)
-                putExtra(EXTRA_ELAPSED_MINUTES, elapsedMinutes)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-            }
-            context.startActivity(intent)
+            context.startActivity(buildIntent(context, scenario, setMinutes, elapsedMinutes))
         }
     }
 }
@@ -176,6 +187,7 @@ private fun OverlayScreen(
     onIntervalChange: (Int) -> Unit,
     onNotesChange: (String) -> Unit,
     onNotifyTypeChange: (NotifyType) -> Unit,
+    onFocusRatingChange: (FocusRating) -> Unit,
     onConfirm: () -> Unit,
 ) {
     Surface(
@@ -244,6 +256,18 @@ private fun OverlayScreen(
                 minLines = 2,
             )
 
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "How focused were you?",
+                style = MaterialTheme.typography.labelLarge,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            FocusRatingRow(
+                selected = uiState.focusRating,
+                onSelect = onFocusRatingChange,
+            )
+
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
@@ -290,6 +314,23 @@ private fun formatDuration(minutes: Int): String {
     val hours = minutes / 60
     val remainder = minutes % 60
     return if (remainder == 0) "$hours hr" else "$hours hr $remainder min"
+}
+
+@Composable
+private fun FocusRatingRow(
+    selected: FocusRating?,
+    onSelect: (FocusRating) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FocusRating.entries.forEach { rating ->
+            FilterChip(
+                selected = selected == rating,
+                onClick = { onSelect(rating) },
+                label = { Text(rating.name) },
+            )
+        }
+    }
 }
 
 private val INTERVAL_PRESETS = listOf(-10, 1, 2, 3, 5, 7, 10, 15, 25, 30, 45, 60, 90)

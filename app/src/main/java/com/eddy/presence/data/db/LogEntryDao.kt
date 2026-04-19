@@ -1,6 +1,7 @@
 package com.eddy.presence.data.db
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import com.eddy.presence.data.model.LogEntry
@@ -11,6 +12,9 @@ interface LogEntryDao {
 
     @Insert
     suspend fun insert(entry: LogEntry)
+
+    @Delete
+    suspend fun delete(entry: LogEntry)
 
     @Query("SELECT * FROM log_entries WHERE timestamp >= :startOfDay ORDER BY timestamp DESC LIMIT 20")
     fun getEntriesForDay(startOfDay: Long): Flow<List<LogEntry>>

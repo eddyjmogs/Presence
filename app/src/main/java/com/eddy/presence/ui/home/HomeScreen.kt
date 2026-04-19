@@ -2,6 +2,8 @@ package com.eddy.presence.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -25,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.eddy.presence.FocusRating
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,7 +45,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onStartDeepWork: () -> Unit,
-    onStopSession: () -> Unit,
+    onStopSession: (FocusRating) -> Unit,
     onViewSession: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(),
@@ -125,12 +129,13 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SessionBanner(
     session: ActiveSession,
     countdownSeconds: Long,
     onViewSession: () -> Unit,
-    onStop: () -> Unit,
+    onStop: (FocusRating) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -161,6 +166,7 @@ private fun SessionBanner(
         Spacer(modifier = Modifier.height(8.dp))
 
         var showConfirm by remember { mutableStateOf(false) }
+        var selectedRating by remember { mutableStateOf<FocusRating?>(null) }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
@@ -183,12 +189,27 @@ private fun SessionBanner(
 
         if (showConfirm) {
             AlertDialog(
-                onDismissRequest = { showConfirm = false },
+                onDismissRequest = { showConfirm = false; selectedRating = null },
                 title = { Text("End session?") },
-                text = { Text("Your current interval won't be logged.") },
+                text = {
+                    Column {
+                        Text("How focused were you?")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FocusRating.entries.forEach { rating ->
+                                FilterChip(
+                                    selected = selectedRating == rating,
+                                    onClick = { selectedRating = rating },
+                                    label = { Text(rating.name) },
+                                )
+                            }
+                        }
+                    }
+                },
                 confirmButton = {
                     Button(
-                        onClick = { showConfirm = false; onStop() },
+                        onClick = { showConfirm = false; onStop(selectedRating!!) },
+                        enabled = selectedRating != null,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
                             contentColor = MaterialTheme.colorScheme.onError,
@@ -196,7 +217,7 @@ private fun SessionBanner(
                     ) { Text("End Session") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showConfirm = false }) { Text("Cancel") }
+                    TextButton(onClick = { showConfirm = false; selectedRating = null }) { Text("Cancel") }
                 },
             )
         }
@@ -210,7 +231,13 @@ private fun LogEntryRow(
     entry: LogEntry,
     modifier: Modifier = Modifier,
 ) {
-    val time = timeFormatter.format(Date(entry.timestamp)).lowercase()
+    val endTime = timeFormatter.format(Date(entry.timestamp)).lowercase()
+    val timeLabel = if (entry.sessionStartTime > 0L) {
+        val startTime = timeFormatter.format(Date(entry.sessionStartTime)).lowercase()
+        "$startTime → $endTime"
+    } else {
+        endTime
+    }
     val summary = buildString {
         if (entry.didText.isNotBlank()) append("Did: ${entry.didText}")
         if (entry.nextFocusText.isNotBlank()) {
@@ -221,17 +248,33 @@ private fun LogEntryRow(
 
     Row(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = time,
+            text = timeLabel,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(64.dp),
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = summary,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            if (entry.focusRating.isNotBlank()) {
+                val (label, color) = when (entry.focusRating) {
+                    "Focused" -> "Focused" to androidx.compose.ui.graphics.Color(0xFF2E7D32)
+                    "Partly" -> "Partly" to androidx.compose.ui.graphics.Color(0xFFF57F17)
+                    else -> "Distracted" to MaterialTheme.colorScheme.error
+                }
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = color,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+            if (summary.isNotBlank()) {
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }

@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,6 +52,7 @@ class HistoryActivity : ComponentActivity() {
                 val history by viewModel.history.collectAsState()
                 HistoryScreen(
                     history = history,
+                    onDelete = viewModel::delete,
                     onBack = ::finish,
                 )
             }
@@ -67,6 +70,7 @@ class HistoryActivity : ComponentActivity() {
 @Composable
 private fun HistoryScreen(
     history: List<DayGroup>,
+    onDelete: (LogEntry) -> Unit,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -97,7 +101,7 @@ private fun HistoryScreen(
                         DayHeader(label = group.label)
                     }
                     items(group.entries, key = { it.id }) { entry ->
-                        EntryRow(entry = entry)
+                        EntryRow(entry = entry, onDelete = { onDelete(entry) })
                     }
                 }
             }
@@ -124,8 +128,14 @@ private fun DayHeader(label: String) {
 private val timeFormat = SimpleDateFormat("h:mma", Locale.getDefault())
 
 @Composable
-private fun EntryRow(entry: LogEntry, modifier: Modifier = Modifier) {
-    val time = timeFormat.format(Date(entry.timestamp)).lowercase()
+private fun EntryRow(entry: LogEntry, onDelete: () -> Unit, modifier: Modifier = Modifier) {
+    val endTime = timeFormat.format(Date(entry.timestamp)).lowercase()
+    val time = if (entry.sessionStartTime > 0L) {
+        val startTime = timeFormat.format(Date(entry.sessionStartTime)).lowercase()
+        "$startTime → $endTime"
+    } else {
+        endTime
+    }
     val modeLabel = if (entry.mode == "DEEP_WORK") "Deep Work" else entry.mode
     val detail = buildString {
         if (entry.didText.isNotBlank()) append("Did: ${entry.didText}")
@@ -139,17 +149,20 @@ private fun EntryRow(entry: LogEntry, modifier: Modifier = Modifier) {
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = androidx.compose.ui.Alignment.Top,
     ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        ) {
         Row {
             Text(
                 text = time,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.width(56.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -157,6 +170,20 @@ private fun EntryRow(entry: LogEntry, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
             )
+            if (entry.focusRating.isNotBlank()) {
+                Spacer(modifier = Modifier.width(8.dp))
+                val (label, color) = when (entry.focusRating) {
+                    "Focused" -> "Focused" to androidx.compose.ui.graphics.Color(0xFF2E7D32)
+                    "Partly" -> "Partly" to androidx.compose.ui.graphics.Color(0xFFF57F17)
+                    else -> "Distracted" to MaterialTheme.colorScheme.error
+                }
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = color,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
         }
         if (detail.isNotBlank()) {
             Spacer(modifier = Modifier.height(2.dp))
@@ -166,6 +193,14 @@ private fun EntryRow(entry: LogEntry, modifier: Modifier = Modifier) {
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 64.dp),
+            )
+        }
+        } // end Column
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Delete entry",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

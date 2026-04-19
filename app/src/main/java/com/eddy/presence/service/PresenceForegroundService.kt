@@ -137,31 +137,59 @@ class PresenceForegroundService : Service() {
     }
 
     private fun buildDeepWorkNotification(intervalEndMs: Long = 0L): Notification {
-        val openAppIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        val store = SessionStateStore(this)
+        val isPending = store.pendingAcknowledgement
+        val now = System.currentTimeMillis()
+
+        val contentPendingIntent: PendingIntent
+        val actionLabel: String
+        val actionPendingIntent: PendingIntent
+
+        if (isPending) {
+            val elapsedMinutes = if (store.timerStartTime > 0L)
+                ((now - store.timerStartTime) / 60_000L).toInt().coerceAtLeast(1) else 1
+            val overlayIntent = com.eddy.presence.ui.overlay.DeepWorkOverlayActivity.buildIntent(
+                this, com.eddy.presence.ui.overlay.OverlayScenario.OverTime,
+                store.intervalMinutes, elapsedMinutes,
+            )
+            contentPendingIntent = PendingIntent.getActivity(
+                this, 2, overlayIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            actionLabel = "Check In Now"
+            actionPendingIntent = PendingIntent.getActivity(
+                this, 3, overlayIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        } else {
+            val openAppIntent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            contentPendingIntent = PendingIntent.getActivity(
+                this, 0, openAppIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            val openSessionIntent = Intent(this, com.eddy.presence.ui.session.DeepWorkSessionActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            actionLabel = "Open Session"
+            actionPendingIntent = PendingIntent.getActivity(
+                this, 1, openSessionIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
         }
-        val contentPendingIntent = PendingIntent.getActivity(
-            this, 0, openAppIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val openSessionIntent = Intent(this, com.eddy.presence.ui.session.DeepWorkSessionActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-        val sessionPendingIntent = PendingIntent.getActivity(
-            this, 1, openSessionIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+
         return Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Deep Work")
-            .setContentText("Session in progress")
+            .setContentText(if (isPending) "Check-in pending" else "Session in progress")
             .setContentIntent(contentPendingIntent)
-            .addAction(0, "Open Session", sessionPendingIntent)
+            .addAction(0, actionLabel, actionPendingIntent)
             .setOngoing(true)
             .setShowWhen(true)
-            .setUsesChronometer(true)
+            .setUsesChronometer(!isPending)
             .setChronometerCountDown(true)
-            .setWhen(intervalEndMs.takeIf { it > 0L } ?: System.currentTimeMillis())
+            .setWhen(intervalEndMs.takeIf { it > 0L } ?: now)
             .build()
     }
 

@@ -8,7 +8,7 @@ import com.eddy.presence.data.model.LogEntry
 
 @Database(
     entities = [LogEntry::class],
-    version = 4,
+    version = 6,
     exportSchema = false,
 )
 abstract class PresenceDatabase : RoomDatabase() {
