@@ -74,29 +74,12 @@ class PresenceForegroundService : Service() {
                 cancelVibration()
                 TorchController.turnOff(this)
             }
-            ACTION_START_FOCUS_MODE -> {
-                val contextName = intent.getStringExtra(EXTRA_CONTEXT) ?: ""
-                val store = SessionStateStore(this)
-                store.focusModeActive = true
-                store.focusModeContext = contextName
-                store.focusModeAllowedPackage = ""
-                startForeground(NOTIFICATION_ID, buildFocusModeNotification(contextName))
-            }
-            ACTION_STOP_FOCUS_MODE -> {
-                val store = SessionStateStore(this)
-                store.focusModeActive = false
-                store.focusModeAllowedPackage = ""
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
-            }
             ACTION_STOP -> {
                 stopAlarmRingtone()
                 cancelVibration()
                 TorchController.turnOff(this)
                 val store = SessionStateStore(this)
                 store.clearSession()
-                store.focusModeActive = false
-                store.focusModeAllowedPackage = ""
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -153,23 +136,6 @@ class PresenceForegroundService : Service() {
         notificationManager.createNotificationChannel(channel)
     }
 
-    private fun buildFocusModeNotification(contextName: String): Notification {
-        val openAppIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, openAppIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        return Notification.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Focus Mode")
-            .setContentText("Context: $contextName")
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .build()
-    }
-
     private fun buildDeepWorkNotification(intervalEndMs: Long = 0L): Notification {
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -201,14 +167,10 @@ class PresenceForegroundService : Service() {
 
     companion object {
         const val ACTION_START_DEEP_WORK = "com.eddy.presence.START_DEEP_WORK"
-        const val ACTION_START_FOCUS_MODE = "com.eddy.presence.START_FOCUS_MODE"
-        const val ACTION_STOP_FOCUS_MODE = "com.eddy.presence.STOP_FOCUS_MODE"
         const val ACTION_ALARM_FIRED = "com.eddy.presence.ALARM_FIRED"
         const val ACTION_STOP_ALARM = "com.eddy.presence.STOP_ALARM"
         const val ACTION_STOP = "com.eddy.presence.STOP"
         const val ACTION_UPDATE_DEEP_WORK_NOTIFICATION = "com.eddy.presence.UPDATE_DW_NOTIFICATION"
-        const val EXTRA_TASK = "extra_task"
-        const val EXTRA_CONTEXT = "extra_context"
 
         private const val CHANNEL_ID = "presence_session"
         private const val NOTIFICATION_ID = 1
@@ -236,20 +198,6 @@ class PresenceForegroundService : Service() {
 
         fun launchOverlay(context: Context) {
             com.eddy.presence.ui.overlay.DeepWorkOverlayActivity.launch(context)
-        }
-
-        fun startFocusMode(context: Context, contextName: String) {
-            context.startForegroundService(
-                Intent(context, PresenceForegroundService::class.java)
-                    .apply { action = ACTION_START_FOCUS_MODE; putExtra(EXTRA_CONTEXT, contextName) }
-            )
-        }
-
-        fun stopFocusMode(context: Context) {
-            context.startService(
-                Intent(context, PresenceForegroundService::class.java)
-                    .apply { action = ACTION_STOP_FOCUS_MODE }
-            )
         }
 
         fun stop(context: Context) {

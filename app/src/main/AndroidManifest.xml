@@ -47,23 +47,12 @@
             android:exported="false" />
 
         <activity
-            android:name=".ui.whitelist.WhitelistManagerActivity"
-            android:exported="false" />
-
-        <activity
             android:name=".ui.history.HistoryActivity"
             android:exported="false" />
 
         <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false" />
-
-        <activity
-            android:name=".ui.reminder.FocusSoftReminderActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:taskAffinity=""
-            android:theme="@style/Theme.Presence" />
 
         <receiver
             android:name=".alarm.AlarmReceiver"
@@ -83,19 +72,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Session tracking for Deep Work and Focus Mode" />
-        </service>
-
-        <service
-            android:name=".service.PresenceAccessibilityService"
-            android:exported="true"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
+                android:value="Session tracking for Deep Work sessions" />
         </service>
 
     </application>

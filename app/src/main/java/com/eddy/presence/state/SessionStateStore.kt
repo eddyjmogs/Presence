@@ -17,14 +17,6 @@ class SessionStateStore(context: Context) {
         get() = prefs.getBoolean(KEY_DEEP_WORK_ACTIVE, false)
         set(v) = prefs.edit().putBoolean(KEY_DEEP_WORK_ACTIVE, v).apply()
 
-    var focusModeActive: Boolean
-        get() = prefs.getBoolean(KEY_FOCUS_MODE_ACTIVE, false)
-        set(v) = prefs.edit().putBoolean(KEY_FOCUS_MODE_ACTIVE, v).apply()
-
-    var focusModeContext: String
-        get() = prefs.getString(KEY_FOCUS_CONTEXT, "") ?: ""
-        set(v) = prefs.edit().putString(KEY_FOCUS_CONTEXT, v).apply()
-
     var currentTask: String
         get() = prefs.getString(KEY_CURRENT_TASK, "") ?: ""
         set(v) = prefs.edit().putString(KEY_CURRENT_TASK, v).apply()
@@ -91,12 +83,6 @@ class SessionStateStore(context: Context) {
             notifySilent = v == NotifyType.Silent
         }
 
-    // Package the user explicitly allowed during Focus Mode via "Continue Anyway".
-    // Cleared when they open a different app — ensures the reminder re-fires for new apps.
-    var focusModeAllowedPackage: String
-        get() = prefs.getString(KEY_FOCUS_ALLOWED_PKG, "") ?: ""
-        set(v) = prefs.edit().putString(KEY_FOCUS_ALLOWED_PKG, v).apply()
-
     var onboardingDone: Boolean
         get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
         set(v) = prefs.edit().putBoolean(KEY_ONBOARDING_DONE, v).apply()
@@ -116,8 +102,6 @@ class SessionStateStore(context: Context) {
     companion object {
         private const val PREFS_NAME = "presence_session"
         private const val KEY_DEEP_WORK_ACTIVE = "deep_work_active"
-        private const val KEY_FOCUS_MODE_ACTIVE = "focus_mode_active"
-        private const val KEY_FOCUS_CONTEXT = "focus_context"
         private const val KEY_CURRENT_TASK = "current_task"
         private const val KEY_INTERVAL_MINUTES = "interval_minutes"
         private const val KEY_TIMER_START_TIME = "timer_start_time"
@@ -128,7 +112,6 @@ class SessionStateStore(context: Context) {
         private const val KEY_NOTIFY_VIBRATION = "notify_vibration"
         private const val KEY_NOTIFY_FLASHLIGHT = "notify_flashlight"
         private const val KEY_NOTIFY_SILENT = "notify_silent"
-        private const val KEY_FOCUS_ALLOWED_PKG = "focus_allowed_pkg"
         private const val KEY_ONBOARDING_DONE = "onboarding_done"
         private const val KEY_CURRENT_DID_TEXT = "current_did_text"
         private const val KEY_CURRENT_NEXT_FOCUS = "current_next_focus"

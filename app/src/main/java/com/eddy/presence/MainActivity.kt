@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -35,14 +34,14 @@ import androidx.compose.ui.Modifier
 import com.eddy.presence.data.model.LogEntry
 import com.eddy.presence.service.PresenceForegroundService
 import com.eddy.presence.state.SessionStateStore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import com.eddy.presence.ui.home.HomeScreen
 import com.eddy.presence.ui.home.HomeViewModel
 import com.eddy.presence.ui.session.DeepWorkSessionActivity
 import com.eddy.presence.ui.settings.SettingsActivity
 import com.eddy.presence.ui.theme.PresenceTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -50,16 +49,12 @@ class MainActivity : ComponentActivity() {
 
     private var showOnboarding by mutableStateOf(false)
     private var showOverlayPermissionDialog by mutableStateOf(false)
-    private var showAccessibilityDialog by mutableStateOf(false)
     private var showExactAlarmDialog by mutableStateOf(false)
-    private var pendingTask by mutableStateOf<String?>(null)
-    private var pendingFocusContext by mutableStateOf<String?>(null)
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) launchDeepWork()
-        pendingTask = null
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -83,7 +78,6 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     HomeScreen(
                         onStartDeepWork = { startDeepWork() },
-                        onStartFocusMode = { context -> startFocusMode(context) },
                         onStopSession = { stopCurrentSession() },
                         onViewSession = { DeepWorkSessionActivity.launch(this@MainActivity) },
                         modifier = Modifier.padding(innerPadding),
@@ -111,25 +105,6 @@ class MainActivity : ComponentActivity() {
                                 Uri.parse("package:$packageName")))
                         },
                         onDismiss = { showOverlayPermissionDialog = false },
-                    )
-                }
-
-                if (showAccessibilityDialog) {
-                    PermissionExplanationDialog(
-                        title = "Accessibility Service Required",
-                        body = "Presence needs the Accessibility Service to detect when you switch apps during Focus Mode. Please enable 'Presence' in Accessibility Settings.",
-                        onConfirm = {
-                            showAccessibilityDialog = false
-                            val ctx = pendingFocusContext
-                            pendingFocusContext = null
-                            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                            // If they come back and it's enabled, they can tap Start again
-                            ctx?.let { homeViewModel.collapseFocusMode() }
-                        },
-                        onDismiss = {
-                            showAccessibilityDialog = false
-                            pendingFocusContext = null
-                        },
                     )
                 }
 
@@ -170,9 +145,8 @@ class MainActivity : ComponentActivity() {
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
         ) {
-            pendingTask = ""
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             return
         }
@@ -191,62 +165,39 @@ class MainActivity : ComponentActivity() {
         DeepWorkSessionActivity.launch(this)
     }
 
-    private fun startFocusMode(contextName: String) {
-        if (!isAccessibilityEnabled()) {
-            pendingFocusContext = contextName
-            showAccessibilityDialog = true
-            return
-        }
-        PresenceForegroundService.startFocusMode(this, contextName)
-        homeViewModel.collapseFocusMode()
-        homeViewModel.refreshSessionState(SessionStateStore(this).also {
-            it.focusModeActive = true
-            it.focusModeContext = contextName
-        })
-    }
-
     private fun stopCurrentSession() {
         val store = SessionStateStore(this)
-        when {
-            store.deepWorkActive -> {
-                val now = System.currentTimeMillis()
-                val didText = store.currentDidText
-                val nextFocusText = store.currentNextFocusText
-                val notes = store.currentNotes
-                val intervalMinutes = store.intervalMinutes
-                val notifyAlarm = store.notifyAlarm
-                val notifyVibration = store.notifyVibration
-                val notifyFlashlight = store.notifyFlashlight
-                val notifySilent = store.notifySilent
-                if (didText.isNotBlank() || nextFocusText.isNotBlank()) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        (application as PresenceApplication).logRepository.insert(
-                            LogEntry(
-                                timestamp = now,
-                                mode = "DEEP_WORK",
-                                scenario = "Stopped",
-                                taskName = "",
-                                didText = didText,
-                                nextFocusText = nextFocusText,
-                                intervalMinutes = intervalMinutes,
-                                notifyAlarm = notifyAlarm,
-                                notifyVibration = notifyVibration,
-                                notifyFlashlight = notifyFlashlight,
-                                notifySilent = notifySilent,
-                                notes = notes,
-                            )
-                        )
-                    }
-                }
-                store.clearSession()
-                PresenceForegroundService.stop(this)
-            }
-            store.focusModeActive -> {
-                store.focusModeActive = false
-                store.focusModeAllowedPackage = ""
-                PresenceForegroundService.stopFocusMode(this)
+        val now = System.currentTimeMillis()
+        val didText = store.currentDidText
+        val nextFocusText = store.currentNextFocusText
+        val notes = store.currentNotes
+        val intervalMinutes = store.intervalMinutes
+        val notifyAlarm = store.notifyAlarm
+        val notifyVibration = store.notifyVibration
+        val notifyFlashlight = store.notifyFlashlight
+        val notifySilent = store.notifySilent
+        if (didText.isNotBlank() || nextFocusText.isNotBlank()) {
+            CoroutineScope(Dispatchers.IO).launch {
+                (application as PresenceApplication).logRepository.insert(
+                    LogEntry(
+                        timestamp = now,
+                        mode = "DEEP_WORK",
+                        scenario = "Stopped",
+                        taskName = "",
+                        didText = didText,
+                        nextFocusText = nextFocusText,
+                        intervalMinutes = intervalMinutes,
+                        notifyAlarm = notifyAlarm,
+                        notifyVibration = notifyVibration,
+                        notifyFlashlight = notifyFlashlight,
+                        notifySilent = notifySilent,
+                        notes = notes,
+                    )
+                )
             }
         }
+        store.clearSession()
+        PresenceForegroundService.stop(this)
         homeViewModel.refreshSessionState(store)
     }
 
@@ -259,15 +210,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    private fun isAccessibilityEnabled(): Boolean {
-        val flat = Settings.Secure.getString(
-            contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
-        return flat.split(":").any { component ->
-            component.startsWith(packageName, ignoreCase = true) &&
-                component.contains("PresenceAccessibilityService", ignoreCase = true)
-        }
-    }
 }
 
 @androidx.compose.runtime.Composable
@@ -278,10 +220,9 @@ private fun OnboardingDialog(onDismiss: () -> Unit) {
         text = {
             androidx.compose.material3.Text(
                 "Presence keeps you intentional.\n\n" +
-                "• Deep Work — mandatory check-in overlays on a timer\n" +
-                "• Focus Mode — soft reminders when you open off-whitelist apps\n\n" +
+                "• Deep Work — mandatory check-in overlays on a timer\n\n" +
                 "You'll be asked to grant a few permissions:\n" +
-                "Overlay, Accessibility, Exact Alarms, and Battery Optimization.\n\n" +
+                "Overlay, Exact Alarms, and Battery Optimization.\n\n" +
                 "Grant them in Settings → Permissions whenever you're ready."
             )
         },

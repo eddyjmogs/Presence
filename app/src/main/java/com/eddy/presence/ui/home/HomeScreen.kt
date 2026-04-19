@@ -1,7 +1,5 @@
 package com.eddy.presence.ui.home
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,29 +11,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import com.eddy.presence.ui.history.HistoryActivity
-import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.eddy.presence.data.model.LogEntry
-import com.eddy.presence.ui.whitelist.WhitelistManagerActivity
+import com.eddy.presence.ui.history.HistoryActivity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -53,7 +41,6 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onStartDeepWork: () -> Unit,
-    onStartFocusMode: (context: String) -> Unit,
     onStopSession: () -> Unit,
     onViewSession: () -> Unit,
     modifier: Modifier = Modifier,
@@ -61,7 +48,6 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val todayEntries by viewModel.todayEntries.collectAsState()
-    val customContextNames by viewModel.customContextNames.collectAsState()
     val countdownSeconds by viewModel.countdownSeconds.collectAsState()
     val ctx = LocalContext.current
 
@@ -98,31 +84,6 @@ fun HomeScreen(
                 ) {
                     Text("Start Deep Work Session")
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                FocusModeSelector(
-                    expanded = uiState.focusModeExpanded,
-                    customContextNames = customContextNames,
-                    onToggle = viewModel::toggleFocusModeExpanded,
-                    onContextSelected = { context ->
-                        viewModel.collapseFocusMode()
-                        onStartFocusMode(context)
-                    },
-                    onManageWhitelist = { contextName ->
-                        WhitelistManagerActivity.launch(ctx, contextName)
-                    },
-                    onAddCustom = viewModel::showCreateContextDialog,
-                )
-            }
-
-            if (uiState.session.focusModeActive && !uiState.session.deepWorkActive) {
-                SessionBanner(
-                    session = uiState.session,
-                    countdownSeconds = countdownSeconds,
-                    onViewSession = {},
-                    onStop = onStopSession,
-                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -162,13 +123,6 @@ fun HomeScreen(
             }
         }
     }
-
-    if (uiState.showCreateContextDialog) {
-        CreateContextDialog(
-            onConfirm = viewModel::createContext,
-            onDismiss = viewModel::dismissCreateContextDialog,
-        )
-    }
 }
 
 @Composable
@@ -183,45 +137,37 @@ private fun SessionBanner(
             .fillMaxWidth()
             .padding(vertical = 4.dp),
     ) {
-        val title = when {
-            session.deepWorkActive -> "Deep Work active"
-            session.focusModeActive -> "Focus Mode: ${session.focusModeContext}"
-            else -> ""
-        }
         Text(
-            text = "● $title",
+            text = "● Deep Work active",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
         )
-        if (session.deepWorkActive) {
-            val isPending = session.timerExpired || countdownSeconds == 0L
-            val countdownText = when {
-                countdownSeconds < 0L -> null
-                isPending -> "Check-in pending"
-                else -> "Next check-in in %d:%02d".format(countdownSeconds / 60, countdownSeconds % 60)
-            }
-            if (countdownText != null) {
-                Text(
-                    text = countdownText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isPending) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+        val isPending = session.timerExpired || countdownSeconds == 0L
+        val countdownText = when {
+            countdownSeconds < 0L -> null
+            isPending -> "Check-in pending"
+            else -> "Next check-in in %d:%02d".format(countdownSeconds / 60, countdownSeconds % 60)
         }
+        if (countdownText != null) {
+            Text(
+                text = countdownText,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isPending) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
 
         var showConfirm by remember { mutableStateOf(false) }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (session.deepWorkActive) {
-                Button(
-                    onClick = onViewSession,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("Open Session")
-                }
+            Button(
+                onClick = onViewSession,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("Open Session")
             }
             Button(
                 onClick = { showConfirm = true },
@@ -252,125 +198,6 @@ private fun SessionBanner(
                 dismissButton = {
                     TextButton(onClick = { showConfirm = false }) { Text("Cancel") }
                 },
-            )
-        }
-    }
-}
-
-@Composable
-private fun CreateContextDialog(
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var name by rememberSaveable { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("New Focus Context") },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Context name") },
-                placeholder = { Text("e.g. Reading, Gym...") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(name) },
-                enabled = name.isNotBlank(),
-            ) {
-                Text("Create")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
-}
-
-@Composable
-private fun FocusModeSelector(
-    expanded: Boolean,
-    customContextNames: List<String>,
-    onToggle: () -> Unit,
-    onContextSelected: (String) -> Unit,
-    onManageWhitelist: (String) -> Unit,
-    onAddCustom: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier) {
-        OutlinedButton(
-            onClick = onToggle,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Enable Focus Mode")
-                Icon(
-                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp
-                    else Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                )
-            }
-        }
-
-        AnimatedVisibility(visible = expanded) {
-            Column(modifier = Modifier.padding(start = 16.dp, top = 4.dp)) {
-                FocusModeOption(
-                    label = "🚇 Commute",
-                    onClick = { onContextSelected("Commute") },
-                    onManage = { onManageWhitelist("Commute") },
-                )
-                FocusModeOption(
-                    label = "🚽 Bathroom",
-                    onClick = { onContextSelected("Bathroom") },
-                    onManage = { onManageWhitelist("Bathroom") },
-                )
-                customContextNames.forEach { name ->
-                    FocusModeOption(
-                        label = name,
-                        onClick = { onContextSelected(name) },
-                        onManage = { onManageWhitelist(name) },
-                    )
-                }
-                FocusModeOption(label = "+ Custom...", onClick = onAddCustom)
-            }
-        }
-    }
-}
-
-@Composable
-private fun FocusModeOption(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    onManage: (() -> Unit)? = null,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier
-                .weight(1f)
-                .clickable(onClick = onClick)
-                .padding(vertical = 6.dp),
-        )
-        if (onManage != null) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Manage whitelist",
-                modifier = Modifier
-                    .clickable(onClick = onManage)
-                    .padding(8.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
