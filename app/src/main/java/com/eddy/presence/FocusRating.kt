@@ -1,3 +1,3 @@
 package com.eddy.presence
 
-enum class FocusRating { Focused, Partly, Distracted }
+enum class FocusRating { Hyper, Focused, Partially, Distracted }

@@ -256,8 +256,9 @@ private fun LogEntryRow(
         Column(modifier = Modifier.weight(1f)) {
             if (entry.focusRating.isNotBlank()) {
                 val (label, color) = when (entry.focusRating) {
+                    "Hyper" -> "Hyper" to androidx.compose.ui.graphics.Color(0xFF6A1B9A)
                     "Focused" -> "Focused" to androidx.compose.ui.graphics.Color(0xFF2E7D32)
-                    "Partly" -> "Partly" to androidx.compose.ui.graphics.Color(0xFFF57F17)
+                    "Partially" -> "Partially" to androidx.compose.ui.graphics.Color(0xFFF57F17)
                     else -> "Distracted" to MaterialTheme.colorScheme.error
                 }
                 Text(

@@ -71,13 +71,11 @@ class DeepWorkSessionActivity : ComponentActivity() {
                     onBack = ::finish,
                     onDidTextChange = viewModel::onDidTextChange,
                     onNextFocusChange = viewModel::onNextFocusChange,
-                    onNotesChange = viewModel::onNotesChange,
                     onStop = { rating ->
                         val store = SessionStateStore(this)
                         val now = System.currentTimeMillis()
                         val didText = store.currentDidText
                         val nextFocusText = store.currentNextFocusText
-                        val notes = store.currentNotes
                         val intervalMinutes = store.intervalMinutes
                         val sessionStartTime = store.timerStartTime
                         val notifyAlarm = store.notifyAlarm
@@ -99,7 +97,6 @@ class DeepWorkSessionActivity : ComponentActivity() {
                                         notifyVibration = notifyVibration,
                                         notifyFlashlight = notifyFlashlight,
                                         notifySilent = notifySilent,
-                                        notes = notes,
                                         focusRating = rating.name,
                                         sessionStartTime = sessionStartTime,
                                     )
@@ -157,7 +154,6 @@ private fun SessionScreen(
     onBack: () -> Unit,
     onDidTextChange: (String) -> Unit,
     onNextFocusChange: (String) -> Unit,
-    onNotesChange: (String) -> Unit,
     onStop: (FocusRating) -> Unit,
 ) {
     Scaffold(
@@ -223,16 +219,6 @@ private fun SessionScreen(
                 value = uiState.nextFocusText,
                 onValueChange = onNextFocusChange,
                 label = { Text("What's your focus for the next interval?") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = uiState.notes,
-                onValueChange = onNotesChange,
-                label = { Text("Notes (optional)") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
             )

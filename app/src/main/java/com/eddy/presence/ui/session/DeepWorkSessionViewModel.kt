@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.update
 data class SessionUiState(
     val didText: String = "",
     val nextFocusText: String = "",
-    val notes: String = "",
     val timerStartTime: Long = 0L,
     val intervalMinutes: Int = 0,
     val timerExpired: Boolean = false,
@@ -32,7 +31,6 @@ class DeepWorkSessionViewModel(application: Application) : AndroidViewModel(appl
         SessionUiState(
             didText = store.currentDidText,
             nextFocusText = store.currentNextFocusText,
-            notes = store.currentNotes,
             timerStartTime = store.timerStartTime,
             intervalMinutes = store.intervalMinutes,
             timerExpired = store.timerExpired,
@@ -57,7 +55,6 @@ class DeepWorkSessionViewModel(application: Application) : AndroidViewModel(appl
             it.copy(
                 didText = store.currentDidText,
                 nextFocusText = store.currentNextFocusText,
-                notes = store.currentNotes,
                 timerStartTime = store.timerStartTime,
                 intervalMinutes = store.intervalMinutes,
                 timerExpired = store.timerExpired,
@@ -73,10 +70,5 @@ class DeepWorkSessionViewModel(application: Application) : AndroidViewModel(appl
     fun onNextFocusChange(text: String) {
         store.currentNextFocusText = text
         _uiState.update { it.copy(nextFocusText = text) }
-    }
-
-    fun onNotesChange(text: String) {
-        store.currentNotes = text
-        _uiState.update { it.copy(notes = text) }
     }
 }

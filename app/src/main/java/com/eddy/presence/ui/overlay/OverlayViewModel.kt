@@ -22,7 +22,6 @@ data class OverlayUiState(
     val nextFocusText: String = "",
     val intervalMinutes: Int = 25,
     val notifyType: NotifyType = NotifyType.Silent,
-    val notes: String = "",
     val focusRating: FocusRating? = null,
 ) {
     val canConfirm: Boolean get() = didText.isNotBlank() && nextFocusText.isNotBlank() && focusRating != null
@@ -52,7 +51,6 @@ class OverlayViewModel : ViewModel() {
         notifyType: NotifyType,
         didText: String = "",
         nextFocusText: String = "",
-        notes: String = "",
     ) {
         _uiState.update {
             it.copy(
@@ -62,7 +60,6 @@ class OverlayViewModel : ViewModel() {
                 notifyType = notifyType,
                 didText = didText,
                 nextFocusText = nextFocusText,
-                notes = notes,
             )
         }
     }
@@ -70,7 +67,6 @@ class OverlayViewModel : ViewModel() {
     fun onDidTextChange(text: String) = _uiState.update { it.copy(didText = text) }
     fun onNextFocusChange(text: String) = _uiState.update { it.copy(nextFocusText = text) }
     fun onIntervalChange(minutes: Int) = _uiState.update { it.copy(intervalMinutes = minutes) }
-    fun onNotesChange(text: String) = _uiState.update { it.copy(notes = text) }
     fun onNotifyTypeChange(type: NotifyType) = _uiState.update { it.copy(notifyType = type) }
     fun onFocusRatingChange(rating: FocusRating) = _uiState.update { it.copy(focusRating = rating) }
 }

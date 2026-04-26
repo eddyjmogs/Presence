@@ -81,7 +81,6 @@ class DeepWorkOverlayActivity : ComponentActivity() {
             notifyType = store.notifyType,
             didText = store.currentDidText,
             nextFocusText = store.currentNextFocusText,
-            notes = store.currentNotes,
         )
 
         setContent {
@@ -92,7 +91,6 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                     onDidTextChange = viewModel::onDidTextChange,
                     onNextFocusChange = viewModel::onNextFocusChange,
                     onIntervalChange = viewModel::onIntervalChange,
-                    onNotesChange = viewModel::onNotesChange,
                     onNotifyTypeChange = viewModel::onNotifyTypeChange,
                     onFocusRatingChange = viewModel::onFocusRatingChange,
                     onConfirm = {
@@ -110,7 +108,6 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                         store.pendingAcknowledgement = false
                         store.currentDidText = ""
                         store.currentNextFocusText = ""
-                        store.currentNotes = ""
                         // Always stop alarm sound, vibration, and torch regardless of
                         // which notification type was active — torch in particular must
                         // never be left on.
@@ -134,7 +131,6 @@ class DeepWorkOverlayActivity : ComponentActivity() {
                                 notifyVibration = state.notifyVibration,
                                 notifyFlashlight = state.notifyFlashlight,
                                 notifySilent = state.notifySilent,
-                                notes = state.notes,
                                 focusRating = state.focusRating?.name ?: "",
                                 sessionStartTime = intervalStartTime,
                             ))
@@ -149,6 +145,18 @@ class DeepWorkOverlayActivity : ComponentActivity() {
     // Prevent back-press dismissal — user must fill required fields and tap Confirm
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() = Unit
+
+    // Fires when the user presses Home or switches apps. Immediately relaunch so
+    // the overlay stays on top until the check-in is confirmed.
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (SessionStateStore(this).pendingAcknowledgement) {
+            startActivity(
+                Intent(this, DeepWorkOverlayActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            )
+        }
+    }
 
     companion object {
         private const val EXTRA_SCENARIO = "extra_scenario"
@@ -185,7 +193,6 @@ private fun OverlayScreen(
     onDidTextChange: (String) -> Unit,
     onNextFocusChange: (String) -> Unit,
     onIntervalChange: (Int) -> Unit,
-    onNotesChange: (String) -> Unit,
     onNotifyTypeChange: (NotifyType) -> Unit,
     onFocusRatingChange: (FocusRating) -> Unit,
     onConfirm: () -> Unit,
@@ -244,16 +251,6 @@ private fun OverlayScreen(
             NotificationTypeRow(
                 selected = uiState.notifyType,
                 onSelect = onNotifyTypeChange,
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            OutlinedTextField(
-                value = uiState.notes,
-                onValueChange = onNotesChange,
-                label = { Text("Notes (optional)") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2,
             )
 
             Spacer(modifier = Modifier.height(24.dp))

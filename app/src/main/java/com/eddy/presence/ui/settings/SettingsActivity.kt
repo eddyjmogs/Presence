@@ -57,6 +57,7 @@ import com.eddy.presence.ui.theme.PresenceTheme
 
 private data class PermissionState(
     val hasOverlay: Boolean,
+    val hasAccessibility: Boolean,
     val hasExactAlarm: Boolean,
     val hasNotifications: Boolean,
     val hasBatteryExempt: Boolean,
@@ -194,6 +195,7 @@ private fun PermissionsSection(context: Context) {
 
     fun checkPermissions() = PermissionState(
         hasOverlay = Settings.canDrawOverlays(context),
+        hasAccessibility = isAccessibilityEnabled(context),
         hasExactAlarm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
             (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
         else true,
@@ -226,6 +228,11 @@ private fun PermissionsSection(context: Context) {
         },
     )
     PermissionRow(
+        label = "Accessibility service",
+        granted = perms.hasAccessibility,
+        onGrant = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
+    )
+    PermissionRow(
         label = "Exact alarms",
         granted = perms.hasExactAlarm,
         onGrant = {
@@ -255,6 +262,17 @@ private fun PermissionsSection(context: Context) {
             )
         },
     )
+}
+
+private fun isAccessibilityEnabled(context: Context): Boolean {
+    val flat = Settings.Secure.getString(
+        context.contentResolver,
+        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+    ) ?: return false
+    return flat.split(":").any { component ->
+        component.startsWith(context.packageName, ignoreCase = true) &&
+            component.contains("PresenceAccessibilityService", ignoreCase = true)
+    }
 }
 
 @Composable

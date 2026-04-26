@@ -190,7 +190,6 @@ class MainActivity : ComponentActivity() {
         val now = System.currentTimeMillis()
         val didText = store.currentDidText
         val nextFocusText = store.currentNextFocusText
-        val notes = store.currentNotes
         val intervalMinutes = store.intervalMinutes
         val sessionStartTime = store.timerStartTime
         val notifyAlarm = store.notifyAlarm
@@ -212,7 +211,6 @@ class MainActivity : ComponentActivity() {
                         notifyVibration = notifyVibration,
                         notifyFlashlight = notifyFlashlight,
                         notifySilent = notifySilent,
-                        notes = notes,
                         focusRating = rating.name,
                         sessionStartTime = sessionStartTime,
                     )
